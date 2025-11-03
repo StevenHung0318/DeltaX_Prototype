@@ -1026,7 +1026,7 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
           <p className="text-gray-400">{marketPageDescription}</p>
         </div>
         {markets.length > 0 && (
-          <div className="flex items-center space-x-2 self-start">
+          <div className="flex flex-wrap items-center gap-2 self-start">
             <span className="text-xs uppercase tracking-wide text-gray-500">View</span>
             <button
               onClick={() => handleViewModeToggle('card')}

@@ -114,7 +114,7 @@ const supplyWeightedApy = supplyTotalValue > 0
   : 0;
 
 const hasBorrowPositions = userMarketPositions.length > 0;
-  const borrowRows = hasBorrowPositions
+const borrowRows = hasBorrowPositions
     ? userMarketPositions
         .map((position) => {
           const market = markets.find((m) => m.id === position.market_id);
@@ -137,7 +137,7 @@ const hasBorrowPositions = userMarketPositions.length > 0;
             marketId: market.id,
             marketName: `${market.collateral_asset} / ${market.loan_asset}`,
             collateralDisplay: `${position.collateral.toFixed(4)} ${market.collateral_asset} · ${formatUSD(collateralValue)}`,
-            borrowedDisplay: `${formatUSD(borrowedValue)} ${market.loan_asset}`,
+            borrowedDisplay: `${formatUSD(borrowedValue).replace('$', '')} ${market.loan_asset}`,
             borrowedValueUSD: borrowedValue,
             ltvDisplay: formatPercent(ltv),
             healthDisplay: healthFactor === Infinity ? '--' : healthFactor.toFixed(2),
@@ -259,7 +259,7 @@ const activeVault = useMemo<Vault | null>(() => {
                 <p className="text-xs text-gray-500 mt-1">Current lending deposits and vault exposure.</p>
               </div>
             </header>
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full table-fixed text-sm">
                 <thead className="bg-[#0A0B0F] text-xs uppercase tracking-wide text-gray-500">
                   <tr>
@@ -314,6 +314,54 @@ const activeVault = useMemo<Vault | null>(() => {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div className="md:hidden space-y-4 p-4">
+              {supplyRows.map((row) => (
+                <div key={row.id} className="rounded-xl border border-gray-800 bg-[#10131C] p-4 space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-white font-semibold">{row.marketName}</div>
+                      <div className="text-xs text-gray-500">{row.vaultName}</div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        row.marketId &&
+                        setModalState({
+                          type: 'supply',
+                          marketId: row.marketId,
+                          vaultId: row.vaultId ?? null,
+                          vaultName: row.vaultName,
+                          initialTab: 'supply'
+                        })
+                      }
+                      disabled={!row.marketId || !row.vaultId}
+                      className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium ${
+                        !row.marketId || !row.vaultId
+                          ? 'border-gray-700 text-gray-500 cursor-not-allowed'
+                          : 'border-[#2A3042] text-white hover:bg-[#1F2330] transition-colors'
+                      }`}
+                    >
+                      <span>Manage</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-y-3 text-sm">
+                    <div className="text-gray-400">Market Size</div>
+                    <div className="text-white font-mono">{row.marketSizeDisplay}</div>
+                    <div className="text-gray-400">Your Supplied</div>
+                    <div>
+                      <div className="text-white font-mono">{row.suppliedDisplay}</div>
+                      <div className="text-xs text-gray-500">≈ {row.valueDisplay}</div>
+                    </div>
+                    <div className="text-gray-400">Utilization</div>
+                    <div className="text-white">{row.utilizationDisplay}</div>
+                    <div className="text-gray-400">Supply APY</div>
+                    <div className="text-[#00D395] font-semibold">{row.apyDisplay}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -392,6 +440,61 @@ const activeVault = useMemo<Vault | null>(() => {
                   })}
                 </tbody>
               </table>
+            </div>
+
+            <div className="md:hidden space-y-4 p-4">
+              {borrowRows.map((row) => {
+                let healthColor = 'text-gray-400';
+                if (row.healthVariant === 'safe') healthColor = 'text-[#00D395]';
+                else if (row.healthVariant === 'warn') healthColor = 'text-[#FFB237]';
+                else if (row.healthVariant === 'risk') healthColor = 'text-[#FF5252]';
+
+                return (
+                  <div key={row.id} className="rounded-xl border border-gray-800 bg-[#10131C] p-4 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-white font-semibold">{row.marketName}</div>
+                        <div className="text-xs text-gray-500">{row.collateralDisplay}</div>
+                      </div>
+                      <button
+                        onClick={() =>
+                          row.marketId &&
+                          setModalState({
+                            type: 'borrow',
+                            marketId: row.marketId,
+                            initialTab: 'borrow'
+                          })
+                        }
+                        disabled={!row.marketId}
+                        className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium ${
+                          !row.marketId
+                            ? 'border-gray-700 text-gray-500 cursor-not-allowed'
+                            : 'border-[#2A3042] text-white hover:bg-[#1F2330] transition-colors'
+                        }`}
+                      >
+                        <span>Manage</span>
+                        <ArrowRight size={14} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-y-3 text-sm">
+                      <div className="text-gray-400">Loan</div>
+                      <div className="text-white font-mono">{row.loanDisplay}</div>
+                      <div className="text-gray-400">Health</div>
+                      <div className={`font-mono ${healthColor}`}>
+                        {row.healthDisplay}
+                        <div className="text-xs text-gray-500 mt-1 space-y-1">
+                          <div>LLTV: {row.healthBreakdown.lltv}%</div>
+                          <div>LTV: {row.healthBreakdown.ltv}</div>
+                          <div>Liquidation: {row.healthBreakdown.liquidationPrice}</div>
+                        </div>
+                      </div>
+                      <div className="text-gray-400">Borrow Rate</div>
+                      <div className="text-[#FFB237] font-semibold">{row.aprDisplay}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
         </div>

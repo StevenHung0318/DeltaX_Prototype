@@ -15,11 +15,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
   return (
     <div className="min-h-screen bg-[#0A0B0F]">
       <nav className="border-b border-gray-800 bg-[#161921]">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between sm:justify-start sm:space-x-8">
               <div className="text-2xl font-bold text-white">Borpho</div>
-              <div className="flex space-x-6">
+              <div className="flex items-center space-x-6">
                 <button
                   onClick={() => onNavigate('markets')}
                   className={`px-3 py-2 text-sm font-medium transition-colors ${
@@ -28,7 +28,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >
-                  Borrow
+                  Market
                 </button>
                 <button
                   onClick={() => onNavigate('dashboard')}
@@ -40,9 +40,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
                 >
                   Dashboard
                 </button>
+                <button
+                  onClick={connectedAddress ? disconnectWallet : connectWallet}
+                  className="flex items-center space-x-2 px-4 py-2 bg-[#0052FF] hover:bg-[#0046DD] text-white rounded-lg transition-colors sm:hidden"
+                >
+                  <Wallet size={16} />
+                  <span>{connectedAddress ? formatAddress(connectedAddress) : 'Connect Wallet'}</span>
+                </button>
               </div>
             </div>
-            <div>
+            <div className="hidden sm:flex">
               {connectedAddress ? (
                 <button
                   onClick={disconnectWallet}
@@ -64,7 +71,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
           </div>
         </div>
       </nav>
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {children}
       </main>
     </div>
