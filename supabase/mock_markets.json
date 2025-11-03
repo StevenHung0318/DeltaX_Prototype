@@ -1,0 +1,79 @@
+[
+  {
+    "ticker": "AAPL",
+    "name": "Apple Inc.",
+    "loan": "USDC",
+    "lltv": 70,
+    "total_size": 150000000,
+    "total_borrowed": 80000000,
+    "borrow_apy": 5.2,
+    "utilization": 53.3,
+    "collateral_price": 180
+  },
+  {
+    "ticker": "GOOGL",
+    "name": "Alphabet Inc.",
+    "loan": "USDC",
+    "lltv": 68,
+    "total_size": 140000000,
+    "total_borrowed": 76000000,
+    "borrow_apy": 5.5,
+    "utilization": 54.3,
+    "collateral_price": 135
+  },
+  {
+    "ticker": "TSLA",
+    "name": "Tesla Inc.",
+    "loan": "USDC",
+    "lltv": 65,
+    "total_size": 160000000,
+    "total_borrowed": 92000000,
+    "borrow_apy": 6.1,
+    "utilization": 57.5,
+    "collateral_price": 250
+  },
+  {
+    "ticker": "MSFT",
+    "name": "Microsoft Corp.",
+    "loan": "USDC",
+    "lltv": 72,
+    "total_size": 170000000,
+    "total_borrowed": 95000000,
+    "borrow_apy": 5,
+    "utilization": 55.9,
+    "collateral_price": 310
+  },
+  {
+    "ticker": "AMZN",
+    "name": "Amazon.com Inc.",
+    "loan": "USDC",
+    "lltv": 69,
+    "total_size": 165000000,
+    "total_borrowed": 90000000,
+    "borrow_apy": 5.8,
+    "utilization": 54.5,
+    "collateral_price": 135
+  },
+  {
+    "ticker": "NVDA",
+    "name": "NVIDIA Corp.",
+    "loan": "USDC",
+    "lltv": 64,
+    "total_size": 205000000,
+    "total_borrowed": 118300000,
+    "borrow_apy": 6.8,
+    "utilization": 57.7,
+    "collateral_price": 420.16
+  },
+  {
+    "ticker": "META",
+    "name": "Meta Platforms Inc.",
+    "loan": "USDC",
+    "lltv": 67,
+    "total_size": 215000000,
+    "total_borrowed": 121900000,
+    "borrow_apy": 5.7,
+    "utilization": 56.7,
+    "collateral_price": 312.58
+  }
+]
