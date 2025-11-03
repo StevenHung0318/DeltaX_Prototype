@@ -21,3 +21,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.yarn/
+.yarn/cache/
+.yarn/install-state.gz
+.yarn/
+.pnp.*
