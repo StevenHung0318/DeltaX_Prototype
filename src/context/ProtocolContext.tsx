@@ -3,6 +3,18 @@ import { supabase, Vault, Market, VaultPosition, MarketPosition } from '../lib/s
 
 const STOCK_MARKETS = [
   {
+    ticker: 'SUIG',
+    name: 'Sui Group Holdings Ltd',
+    logo: 'https://universal.hellopublic.com/companyLogos/SUIG@2x.png',
+    price: 12.45,
+    totalSize: 180_000_000,
+    totalBorrowed: 98_500_000,
+    borrowApy: 5.2,
+    supplyApy: 3.1,
+    utilization: 54.7,
+    lltv: 65
+  },
+  {
     ticker: 'AAPL',
     name: 'Apple Inc.',
     logo: 'https://logo.clearbit.com/apple.com',
@@ -156,7 +168,7 @@ export const ProtocolProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           total_size: stock.totalSize,
           total_borrowed: stock.totalBorrowed,
           borrow_apy: stock.borrowApy,
-          supply_apy: stock.supplyApy,
+          supply_apy: stock.supplyApy ?? 0,
           utilization: stock.utilization,
           oracle_address: '',
           collateral_price: stock.price,

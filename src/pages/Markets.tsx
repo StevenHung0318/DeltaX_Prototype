@@ -29,7 +29,7 @@ const MarketLogo: React.FC<{ ticker: string; name?: string; logo?: string; size?
       <img
         src={logo}
         alt={name ? `${name} logo` : `${ticker} logo`}
-        className="h-full w-full object-cover"
+        className="h-full w-full object-contain"
         onError={() => setFailed(true)}
       />
     </div>
@@ -1060,7 +1060,7 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
         <div className="bg-[#161921] rounded-xl border border-gray-800 overflow-hidden">
           <div className="grid grid-cols-7 gap-4 px-6 py-4 border-b border-gray-800 text-sm font-medium text-gray-400">
             <div>Collateral</div>
-            <div>Loan</div>
+            <div className="pl-8">Loan</div>
             <div>Market Size</div>
             <div>Available Liquidity</div>
             <div>Supply APR</div>
@@ -1082,15 +1082,15 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                 onKeyDown={(event) => handleMarketSelectKey(event, market.id)}
                 className="w-full grid grid-cols-7 gap-4 px-6 py-6 hover:bg-[#0A0B0F] transition-colors text-left border-b border-gray-800 last:border-b-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0052FF]"
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 min-w-0">
                   <MarketLogo ticker={market.collateral_asset} name={market.display_name} logo={market.logo} size="sm" />
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-semibold text-white">{market.collateral_asset}</div>
-                    {market.display_name && <div className="text-xs text-gray-500">{market.display_name}</div>}
+                    {market.display_name && <div className="text-xs text-gray-500 truncate">{market.display_name}</div>}
                     <div className="text-xs text-gray-500">Price: {formatUSD(market.collateral_price)}</div>
                   </div>
                 </div>
-                <div>
+                <div className="pl-8">
                   <div className="text-white font-mono">{market.loan_asset}</div>
                   <div className="text-xs text-gray-500">Loan currency</div>
                 </div>
