@@ -2,14 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, TrendingUp, AlertTriangle } from 'lucide-react';
 import { useProtocol } from '../context/ProtocolContext';
 import type { Market } from '../lib/supabase';
-import {
-  formatUSD,
-  formatPercent,
-  calculateHealthFactor,
-  calculateLiquidationPrice,
-  formatAddress,
-  calculateProjectedEarnings
-} from '../utils/format';
+import { formatUSD, formatPercent, calculateHealthFactor, calculateLiquidationPrice, calculateProjectedEarnings } from '../utils/format';
 
 const MarketLogo: React.FC<{ ticker: string; name?: string; logo?: string; size?: 'sm' | 'md' }> = ({ ticker, name, logo, size = 'md' }) => {
   const [failed, setFailed] = useState(false);
@@ -41,8 +34,7 @@ interface MarketsProps {
   onSelectMarket: (marketId: string | null) => void;
 }
 
-type InteractionTab = 'borrow' | 'repay' | 'withdraw';
-type OverviewTab = 'overview' | 'advanced';
+type InteractionTab = 'borrow' | 'repay';
 
 export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMarket }) => {
   const {
@@ -62,7 +54,6 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
   const [repayAmount, setRepayAmount] = useState('');
   const [withdrawColAmount, setWithdrawColAmount] = useState('');
   const [activeTab, setActiveTab] = useState<InteractionTab>('borrow');
-  const [overviewTab, setOverviewTab] = useState<OverviewTab>('overview');
   const [viewTab, setViewTab] = useState<'supply' | 'borrow'>('borrow');
   const [supplyActionTab, setSupplyActionTab] = useState<'supply' | 'withdraw'>('supply');
   const [vaultSupplyAmount, setVaultSupplyAmount] = useState('');
@@ -87,6 +78,54 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
     primaryVault && userVaultPosition
       ? calculateProjectedEarnings(userVaultPosition.assets, primaryVault.apy)
       : null;
+
+  const vaultApy = primaryVault?.apy ?? 0;
+  const currentDeposit = userVaultPosition?.assets ?? 0;
+  const supplyInputAmount = supplyActionTab === 'supply' ? Number(vaultSupplyAmount || 0) : 0;
+  const withdrawInputAmount = supplyActionTab === 'withdraw' ? Number(vaultWithdrawAmount || 0) : 0;
+  const simulatedDeposit = supplyActionTab === 'withdraw'
+    ? Math.max(0, currentDeposit - (isNaN(withdrawInputAmount) ? 0 : withdrawInputAmount))
+    : currentDeposit + (isNaN(supplyInputAmount) ? 0 : supplyInputAmount);
+  const currentYieldEstimate = calculateProjectedEarnings(currentDeposit, vaultApy);
+  const simulatedYieldEstimate = calculateProjectedEarnings(simulatedDeposit, vaultApy);
+
+  const formatDateLabel = (value?: string) =>
+    value ? new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '--';
+
+  const formatTxLabel = (value?: string | null) => {
+    if (!value) return '--';
+    return value.length > 12 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
+  };
+
+  const supplyActivity = userVaultPosition
+    ? [
+        {
+          date: '2025/11/01',
+          action: 'Supply',
+          amount: '100 USDC',
+          tx: '0x2314'
+        },
+        {
+          date: '2025/11/02',
+          action: 'Withdraw',
+          amount: '50 USDC',
+          tx: '0x1324'
+        }
+      ]
+    : [
+        {
+          date: '2025/11/01',
+          action: 'Supply',
+          amount: '100 USDC',
+          tx: '0x2314'
+        },
+        {
+          date: '2025/11/02',
+          action: 'Withdraw',
+          amount: '50 USDC',
+          tx: '0x1324'
+        }
+      ];
 
   const getSupplyApyForMarket = (market: Market) => {
     if (typeof market.supply_apy === 'number') {
@@ -134,8 +173,6 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
     (userPosition?.collateral || 0) * (selectedMarket?.collateral_price || 0) +
     parseFloat(collateralAmount || '0') * (selectedMarket?.collateral_price || 0);
   const projectedBorrowed = currentBorrowed + parseFloat(borrowAmount || '0');
-  const projectedLtv = projectedCollateralValue > 0 ? (projectedBorrowed / projectedCollateralValue) * 100 : 0;
-
   const healthFactor = selectedMarket
     ? calculateHealthFactor(projectedCollateralValue, projectedBorrowed, selectedMarket.lltv)
     : Infinity;
@@ -148,23 +185,66 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
       )
     : 0;
 
-  const formattedCreatedDate = selectedMarket?.created_at
-    ? new Date(selectedMarket.created_at).toISOString().split('T')[0]
-    : '--';
-  const oraclePriceDisplay = selectedMarket
-    ? `${selectedMarket.collateral_asset} / ${selectedMarket.loan_asset} = ${formatUSD(selectedMarket.collateral_price)}`
-    : '--';
+  const fallbackBorrowPosition = selectedMarket
+    ? (() => {
+        const price = selectedMarket.collateral_price || 0;
+        if (price <= 0) {
+          return { collateral: 0, borrow_assets: 0 };
+        }
+        const targetCollateralUsd = 8000;
+        const collateralAmount = parseFloat((targetCollateralUsd / price).toFixed(4));
+        const maxBorrowAtLltv = targetCollateralUsd * (selectedMarket.lltv / 100);
+        const borrowAssets = parseFloat((maxBorrowAtLltv * 0.8).toFixed(2));
+        return {
+          collateral: collateralAmount,
+          borrow_assets: borrowAssets
+        };
+      })()
+    : null;
+
+  const displayCollateralAmount = selectedMarket
+    ? userPosition?.collateral ?? fallbackBorrowPosition?.collateral ?? 0
+    : 0;
+  const displayBorrowAmount = selectedMarket
+    ? userPosition?.borrow_assets ?? fallbackBorrowPosition?.borrow_assets ?? 0
+    : 0;
+  const displayCollateralValue = displayCollateralAmount * (selectedMarket?.collateral_price || 0);
+  const displayLtv = displayCollateralValue > 0 ? (displayBorrowAmount / displayCollateralValue) * 100 : 0;
+  const displayLiquidationPrice = selectedMarket
+    ? calculateLiquidationPrice(displayCollateralAmount, displayBorrowAmount, selectedMarket.lltv)
+    : 0;
+  const borrowActivity = selectedMarket
+    ? [
+        {
+          date: '2025/11/03',
+          action: 'Deposit (Collateral)',
+          amount: `${(Math.max(displayCollateralAmount, 15)).toFixed(2)} ${selectedMarket.collateral_asset}`,
+          tx: '0xa91b'
+        },
+        {
+          date: '2025/11/04',
+          action: 'Borrow (Loan)',
+          amount: `${formatUSD(Math.max(displayBorrowAmount, 800)).replace('$', '')} ${selectedMarket.loan_asset}`,
+          tx: '0xb42c'
+        },
+        {
+          date: '2025/11/05',
+          action: 'Withdraw (Collateral)',
+          amount: `${(Math.max((displayCollateralAmount * 0.2), 3)).toFixed(2)} ${selectedMarket.collateral_asset}`,
+          tx: '0xc53d'
+        },
+        {
+          date: '2025/11/06',
+          action: 'Repay (Loan)',
+          amount: `${formatUSD(Math.max(displayBorrowAmount * 0.3, 250)).replace('$', '')} ${selectedMarket.loan_asset}`,
+          tx: '0xd64e'
+        }
+      ]
+    : [];
 
   const targetUtilization = 90;
-  const interestRateModel = '0x870a00000000000000000000000000000000BC';
   const liquidationPenalty = 4.38;
-  const realizedBadDebt = 4.48;
-  const unrealizedBadDebt = 0;
   const formatUSDCAmount = (value: number) => `${formatUSD(value).replace('$', '')} USDC`;
-
-  const borrowAmountToTarget = selectedMarket
-    ? Math.max(0, ((targetUtilization - selectedMarket.utilization) / 100) * selectedMarket.total_size)
-    : 0;
 
   const handleBorrow = async () => {
     if (!selectedMarketId || !connectedAddress) return;
@@ -196,6 +276,23 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
 
     await withdrawCollateral(selectedMarketId, amount);
     setWithdrawColAmount('');
+  };
+
+  const handleRepayAndWithdrawAction = async () => {
+    if (!selectedMarketId || !connectedAddress) return;
+
+    const repayValue = parseFloat(repayAmount || '0');
+    const withdrawValue = parseFloat(withdrawColAmount || '0');
+
+    const canRepay = !!userPosition && repayValue > 0 && repayValue <= userPosition.borrow_assets;
+    const canWithdraw = !!userPosition && withdrawValue > 0 && withdrawValue <= userPosition.collateral;
+
+    if (canRepay) {
+      await handleRepay();
+    }
+    if (canWithdraw) {
+      await handleWithdrawCollateral();
+    }
   };
 
   const handleVaultSupply = async () => {
@@ -235,6 +332,34 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
     const collateralTicker = selectedMarket.collateral_asset;
     const collateralName = selectedMarket.display_name;
     const collateralLabel = collateralName ? `${collateralTicker} (${collateralName})` : collateralTicker;
+    const loanTicker = selectedMarket.loan_asset;
+    const formatTokenAmount = (amount: number, symbol: string) =>
+      `${amount.toLocaleString(undefined, { maximumFractionDigits: 4, minimumFractionDigits: 0 })} ${symbol}`;
+    const currentCollateralAmount = displayCollateralAmount;
+    const currentLoanAmount = displayBorrowAmount;
+    const collateralInputValue = Number(collateralAmount) || 0;
+    const borrowInputValue = Number(borrowAmount) || 0;
+    const projectedCollateralAmount = Math.max(0, currentCollateralAmount + collateralInputValue);
+    const projectedLoanAmount = Math.max(0, currentLoanAmount + borrowInputValue);
+    const collateralPrice = selectedMarket.collateral_price || 0;
+    const projectedCollateralUsd = projectedCollateralAmount * collateralPrice;
+    const currentBorrowLtv = displayLtv;
+    const projectedBorrowLtv = projectedCollateralUsd > 0 ? (projectedLoanAmount / projectedCollateralUsd) * 100 : 0;
+    const repayInputValue = Number(repayAmount) || 0;
+    const withdrawInputValue = Number(withdrawColAmount) || 0;
+    const projectedCollateralAfterRepay = Math.max(0, currentCollateralAmount - withdrawInputValue);
+    const projectedLoanAfterRepay = Math.max(0, currentLoanAmount - repayInputValue);
+    const projectedCollateralUsdAfterRepay = projectedCollateralAfterRepay * collateralPrice;
+    const projectedBorrowLtvAfterRepay =
+      projectedCollateralUsdAfterRepay > 0 ? (projectedLoanAfterRepay / projectedCollateralUsdAfterRepay) * 100 : 0;
+    const loanMarketPrice = selectedMarket.loan_asset === 'USDC' ? 1 : selectedMarket.collateral_price || 0;
+    const repayValueNumber = parseFloat(repayAmount || '0');
+    const withdrawValueNumber = parseFloat(withdrawColAmount || '0');
+    const canRepayAction =
+      !!userPosition && repayValueNumber > 0 && repayValueNumber <= userPosition.borrow_assets;
+    const canWithdrawAction =
+      !!userPosition && withdrawValueNumber > 0 && withdrawValueNumber <= userPosition.collateral;
+    const combinedActionDisabled = !canRepayAction && !canWithdrawAction;
 
     return (
       <div className="space-y-8">
@@ -301,99 +426,51 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                     <div className="bg-[#0A0B0F] border border-[#1F2330] rounded-xl p-5">
                       <div className="text-xs uppercase tracking-wide text-gray-500">Total Deposits</div>
                       <div className="mt-2 text-3xl font-bold text-white font-mono">
-                        {formatUSD(primaryVault.total_deposits)}
+                        {`${formatUSD(primaryVault.total_deposits).replace('$', '')} USDC`}
                       </div>
-                      <div className="mt-2 text-xs text-gray-500">Across all suppliers</div>
                     </div>
                     <div className="bg-[#0A0B0F] border border-[#1F2330] rounded-xl p-5">
                       <div className="text-xs uppercase tracking-wide text-gray-500">Available Liquidity</div>
                       <div className="mt-2 text-3xl font-bold text-white font-mono">
-                        {formatUSD(primaryVault.available_liquidity)}
+                        {`${formatUSD(primaryVault.available_liquidity).replace('$', '')} USDC`}
                       </div>
-                      <div className="mt-2 text-xs text-gray-500">Ready to be borrowed</div>
                     </div>
                     <div className="bg-[#0A0B0F] border border-[#1F2330] rounded-xl p-5">
                       <div className="text-xs uppercase tracking-wide text-gray-500">Borrowed Out</div>
                       <div className="mt-2 text-3xl font-bold text-white font-mono">
-                        {formatUSD(borrowedLiquidity)}
+                        {`${formatUSD(borrowedLiquidity).replace('$', '')} USDC`}
                       </div>
-                      <div className="mt-2 text-xs text-gray-500">Currently in use</div>
                     </div>
                   </div>
 
-                  <div className="mt-6 space-y-3">
-                    <div className="flex items-center justify-between text-xs uppercase tracking-wide text-gray-500">
-                      <span>Liquidity Mix</span>
-                      <span>Utilized {formatPercent(vaultUtilization)}</span>
-                    </div>
-                    <div className="h-2 bg-[#0A0B0F] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#0052FF]" style={{ width: `${utilizationBarWidth}%` }} />
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-400 font-mono">
-                      <span>{formatUSD(primaryVault.available_liquidity)} liquid</span>
-                      <span>{formatUSD(borrowedLiquidity)} borrowed</span>
-                    </div>
-                  </div>
                 </section>
 
                 <section className="bg-[#161921] rounded-xl p-6 border border-gray-800">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-white">Your Supply Position</h3>
-                      <p className="text-sm text-gray-400">
-                        Track how your supplied USDC is participating in the vault.
-                      </p>
-                    </div>
-                    {connectedAddress && (
-                      <div className="text-xs text-gray-500 uppercase tracking-wide">
-                        {formatAddress(connectedAddress)}
-                      </div>
-                    )}
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-xl font-semibold text-white">Your Supply Position</h3>
                   </div>
 
                   {userVaultPosition ? (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-                        <div>
-                          <div className="text-xs uppercase tracking-wide text-gray-500">Supplied</div>
-                          <div className="mt-2 text-2xl font-semibold text-white font-mono">
-                            {formatUSD(userVaultPosition.assets)}
-                          </div>
-                          <div className="mt-2 text-xs text-gray-500">Currently earning yield</div>
-                        </div>
-                        <div>
-                          <div className="text-xs uppercase tracking-wide text-gray-500">Vault Shares</div>
-                          <div className="mt-2 text-2xl font-semibold text-white font-mono">
-                            {userVaultPosition.shares.toFixed(2)}
-                          </div>
-                          <div className="mt-2 text-xs text-gray-500">Tokenized receipt of deposits</div>
-                        </div>
-                        <div>
-                          <div className="text-xs uppercase tracking-wide text-gray-500">Share of Pool</div>
-                          <div className="mt-2 text-2xl font-semibold text-white font-mono">
-                            {formatPercent(userSupplyShare)}
-                          </div>
-                          <div className="mt-2 text-xs text-gray-500">Of total deposits</div>
-                        </div>
-                        <div>
-                          <div className="text-xs uppercase tracking-wide text-gray-500">Est. Monthly Yield</div>
-                          <div className="mt-2 text-2xl font-semibold text-white font-mono">
-                            {projectedSupplyEarnings ? formatUSD(projectedSupplyEarnings.monthly) : '--'}
-                          </div>
-                          <div className="mt-2 text-xs text-gray-500">@ {formatPercent(primaryVault.apy)} APY</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-gray-500">Supplied</div>
+                        <div className="mt-2 text-2xl font-semibold text-white font-mono">
+                          {`${formatUSD(userVaultPosition.assets).replace('$', '')} USDC`}
                         </div>
                       </div>
-
-                      {projectedSupplyEarnings && (
-                        <div className="mt-6 bg-[#0A0B0F] border border-[#1F2330] rounded-lg p-4 text-sm text-gray-300">
-                          Your position compounds automatically. That's roughly{' '}
-                          <span className="font-mono text-white">{formatUSD(projectedSupplyEarnings.daily)} / day</span>{' '}
-                          or{' '}
-                          <span className="font-mono text-white">{formatUSD(projectedSupplyEarnings.yearly)} / year</span>{' '}
-                          at the current APY.
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-gray-500">Supply APY</div>
+                        <div className="mt-2 text-2xl font-semibold text-white font-mono">
+                          {formatPercent(primaryVault.apy)}
                         </div>
-                      )}
-                    </>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-gray-500">Est. Yearly Yield</div>
+                        <div className="mt-2 text-2xl font-semibold text-white font-mono">
+                          {projectedSupplyEarnings ? `${formatUSD(projectedSupplyEarnings.yearly).replace('$', '')} USDC` : '--'}
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="mt-6 bg-[#0A0B0F] border border-dashed border-gray-700 rounded-lg p-6 text-center text-gray-400">
                       <div className="text-sm font-medium text-white">No supply position yet</div>
@@ -402,6 +479,35 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                       </p>
                     </div>
                   )}
+
+                  <div className="mt-8">
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Activity</div>
+                    <div className="grid grid-cols-4 text-xs text-gray-500 mt-3 px-4 uppercase tracking-wide">
+                      <span>Date</span>
+                      <span>Action</span>
+                      <span>Amount</span>
+                      <span>Tx</span>
+                    </div>
+                    {supplyActivity.length ? (
+                      <div className="mt-3 space-y-2">
+                        {supplyActivity.map((entry, index) => (
+                          <div
+                            key={`${entry.tx}-${index}`}
+                            className="grid grid-cols-1 sm:grid-cols-4 items-center gap-3 rounded-lg border border-gray-800 bg-[#0A0B0F] px-4 py-3 text-sm"
+                          >
+                            <div className="text-white font-semibold">{entry.date}</div>
+                            <div className="text-gray-400 uppercase tracking-wide">{entry.action}</div>
+                            <div className="text-sm font-mono text-white">{entry.amount}</div>
+                            <div className="text-xs text-gray-400 break-all sm:text-right">{entry.tx}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-lg border border-dashed border-gray-700 px-4 py-6 text-center text-xs text-gray-500">
+                        No activity yet
+                      </div>
+                    )}
+                  </div>
                 </section>
               </div>
 
@@ -507,26 +613,29 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                   )}
                 </section>
 
-                <section className="bg-[#161921] rounded-xl p-6 border border-gray-800 space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Total Deposits</span>
-                    <span className="text-white font-mono">{formatUSD(primaryVault.total_deposits)}</span>
+                <section className="bg-[#161921] rounded-xl p-6 border border-gray-800 text-sm">
+                  <div className="text-xs uppercase tracking-wide text-gray-500">Position Simulation</div>
+                  <div className="mt-3 grid grid-cols-3 text-xs uppercase tracking-wide text-gray-500">
+                    <span>Metric</span>
+                    <span>Current</span>
+                    <span>After</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Available Liquidity</span>
-                    <span className="text-white font-mono">{formatUSD(primaryVault.available_liquidity)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Borrowed Out</span>
-                    <span className="text-white font-mono">{formatUSD(borrowedLiquidity)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Utilization</span>
-                    <span className="text-white font-mono">{formatPercent(vaultUtilization)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Supply APY</span>
-                    <span className="text-white font-mono">{formatPercent(primaryVault.apy)}</span>
+                  <div className="mt-3 space-y-2">
+                    <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0A0B0F] px-4 py-3">
+                      <span className="text-gray-400">Your Deposit</span>
+                      <span className="font-mono text-white">{`${formatUSD(currentDeposit).replace('$', '')} USDC`}</span>
+                      <span className="font-mono text-white">{`${formatUSD(simulatedDeposit).replace('$', '')} USDC`}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0A0B0F] px-4 py-3">
+                      <span className="text-gray-400">Supply APY</span>
+                      <span className="font-mono text-white">{formatPercent(vaultApy)}</span>
+                      <span className="font-mono text-white">{formatPercent(vaultApy)}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0A0B0F] px-4 py-3">
+                      <span className="text-gray-400">Est. Yearly Earnings</span>
+                      <span className="font-mono text-white">{`${formatUSD(currentYieldEstimate.yearly).replace('$', '')} USDC`}</span>
+                      <span className="font-mono text-white">{`${formatUSD(simulatedYieldEstimate.yearly).replace('$', '')} USDC`}</span>
+                    </div>
                   </div>
                 </section>
               </div>
@@ -562,220 +671,138 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
               </div>
             </section>
 
-            {userPosition && (
-              <section className="bg-[#161921] rounded-xl p-6 border border-gray-800">
-                <h3 className="text-xl font-semibold text-white mb-4">Your Position</h3>
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <div className="text-gray-400 text-sm mb-1">Collateral</div>
-                    <div className="text-2xl font-bold text-white font-mono">
-                      {userPosition.collateral.toFixed(4)} {collateralTicker}
-                    </div>
-                    {collateralName && (
-                      <div className="text-xs text-gray-500">{collateralName}</div>
-                    )}
-                    <div className="text-sm text-gray-400">{formatUSD(collateralValue)}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 text-sm mb-1">Borrowed</div>
-                    <div className="text-2xl font-bold text-white font-mono">{formatUSD(userPosition.borrow_assets)}</div>
-                    <div className="text-sm text-gray-400">{selectedMarket.loan_asset}</div>
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-6 border-t border-gray-800">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <div className="text-gray-400 text-sm mb-1">LTV</div>
-                      <div className="text-lg font-semibold text-white">{formatPercent(currentLtv)}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-400 text-sm mb-1">Health Factor</div>
-                      <div
-                        className={`text-lg font-semibold ${
-                          healthFactor > 2 ? 'text-[#00D395]' : healthFactor > 1.2 ? 'text-[#FFB237]' : 'text-[#FF5252]'
-                        }`}
-                      >
-                        {healthFactor === Infinity ? '--' : healthFactor.toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-gray-400 text-sm mb-1">Liquidation Price</div>
-                      <div className="text-lg font-semibold text-white font-mono">
-                        {liquidationPrice > 0 ? formatUSD(liquidationPrice) : '--'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
-
             <section className="bg-[#161921] rounded-xl p-6 border border-gray-800">
-              <h3 className="text-xl font-semibold text-white mb-4">Market Information</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Total Borrowed</span>
-                  <span className="text-white font-mono">{formatUSD(selectedMarket.total_borrowed)}</span>
+              <div className="flex flex-col gap-2">
+                <h3 className="text-xl font-semibold text-white">Your Borrow Position</h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">Collateral</div>
+                  <div className="mt-2 text-2xl font-semibold text-white font-mono">
+                    {displayCollateralAmount.toFixed(4)} {collateralTicker}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">{formatUSD(displayCollateralValue)}</div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Utilization Rate</span>
-                  <span className="text-white">{formatPercent(selectedMarket.utilization)}</span>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">Loan</div>
+                  <div className="mt-2 text-2xl font-semibold text-white font-mono">
+                    {formatUSD(displayBorrowAmount)}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">{selectedMarket.loan_asset}</div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Max LTV</span>
-                  <span className="text-white">{selectedMarket.lltv}%</span>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">LTV / LLTV</div>
+                  <div className="mt-2 text-2xl font-semibold text-white font-mono">
+                    {`${formatPercent(displayLtv)} / ${selectedMarket.lltv}%`}
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Current {collateralTicker} Price</span>
-                  <span className="text-white font-mono">{formatUSD(selectedMarket.collateral_price)}</span>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">Market Price</div>
+                  <div className="mt-2 text-2xl font-semibold text-white font-mono">
+                    {formatUSD(selectedMarket.collateral_price)}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">{collateralTicker}</div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">Liquidation Price</div>
+                  <div className="mt-2 text-2xl font-semibold text-white font-mono">
+                    {displayLiquidationPrice > 0 ? formatUSD(displayLiquidationPrice) : '--'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500">Utilization Rate</div>
+                  <div className="mt-2 text-2xl font-semibold text-white font-mono">
+                    {formatPercent(selectedMarket.utilization)}
+                  </div>
                 </div>
               </div>
+
+              <div className="mt-8">
+                <div className="text-xs uppercase tracking-wide text-gray-500">Activity</div>
+                <div className="grid grid-cols-4 text-xs text-gray-500 mt-3 px-4 uppercase tracking-wide">
+                  <span>Date</span>
+                  <span>Action</span>
+                  <span>Amount</span>
+                  <span>Tx</span>
+                </div>
+                {borrowActivity.length ? (
+                  <div className="mt-3 space-y-2">
+                    {borrowActivity.map((entry, index) => (
+                      <div
+                        key={`${entry.tx}-${index}`}
+                        className="grid grid-cols-1 sm:grid-cols-4 items-center gap-3 rounded-lg border border-gray-800 bg-[#0A0B0F] px-4 py-3 text-sm"
+                      >
+                        <div className="text-white font-semibold">{entry.date}</div>
+                        <div className="text-gray-400 uppercase tracking-wide">{entry.action}</div>
+                        <div className="text-sm font-mono text-white">{entry.amount}</div>
+                        <div className="text-xs text-gray-400 break-all sm:text-right">{entry.tx}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-lg border border-dashed border-gray-700 px-4 py-6 text-center text-xs text-gray-500">
+                    No borrow activity yet
+                  </div>
+                )}
+              </div>
+
             </section>
 
-            <section className="bg-[#161921] rounded-xl p-6 border border-gray-800">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-white">Overview</h3>
-                <div className="flex space-x-6 text-xs uppercase tracking-wide text-gray-500">
-                  <button
-                    onClick={() => setOverviewTab('overview')}
-                    className={`pb-1 transition-colors ${
-                      overviewTab === 'overview'
-                        ? 'text-white border-b-2 border-[#0052FF]'
-                        : 'text-gray-500 hover:text-gray-300'
-                    }`}
-                  >
-                    Overview
-                  </button>
-                  <button
-                    onClick={() => setOverviewTab('advanced')}
-                    className={`pb-1 transition-colors ${
-                      overviewTab === 'advanced'
-                        ? 'text-white border-b-2 border-[#0052FF]'
-                        : 'text-gray-500 hover:text-gray-300'
-                    }`}
-                  >
-                    Advanced
-                  </button>
+            <section className="bg-[#161921] rounded-xl p-6 border border-gray-800 space-y-10">
+              <h3 className="text-xl font-semibold text-white">Overview</h3>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="p-6 space-y-5">
+                  <div className="space-y-3 text-sm divide-y divide-gray-800/60">
+                    <div className="flex justify-between pb-3">
+                      <span className="text-gray-400">Collateral type</span>
+                      <span className="text-white font-medium">{collateralTicker}</span>
+                    </div>
+                    <div className="flex justify-between pt-3 pb-3">
+                      <span className="text-gray-400">Collateral market price</span>
+                      <span className="text-white font-medium">{formatUSD(selectedMarket.collateral_price)}</span>
+                    </div>
+                    <div className="flex justify-between pt-3 pb-3">
+                      <span className="text-gray-400">Loan type</span>
+                      <span className="text-white font-medium">{selectedMarket.loan_asset}</span>
+                    </div>
+                    <div className="flex justify-between pt-3 pb-3">
+                      <span className="text-gray-400">Loan market price</span>
+                      <span className="text-white font-medium">{formatUSD(loanMarketPrice)}</span>
+                    </div>
+                    <div className="flex justify-between pt-3 pb-3">
+                      <span className="text-gray-400">LLTV</span>
+                      <span className="text-white font-medium">{selectedMarket.lltv}%</span>
+                    </div>
+                    <div className="flex justify-between pt-3">
+                      <span className="text-gray-400">Liquidation penalty</span>
+                      <span className="text-white font-medium">{formatPercent(liquidationPenalty)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-[#0A0B0F] border border-gray-900 rounded-xl p-6 flex flex-col justify-between">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs uppercase tracking-wide text-gray-500">Utilization curve</span>
+                    <span className="text-xs text-gray-500">Mock data</span>
+                  </div>
+                  <div className="relative h-40">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#0052FF]/20 via-[#00D395]/10 to-[#FF5252]/20 rounded-lg" />
+                    <div className="absolute bottom-6 left-6 right-6 h-1 bg-gray-800 rounded" />
+                    <div className="absolute right-10 top-6 h-28 w-px bg-[#0052FF]/40" />
+                    <div className="absolute right-10 top-4 text-xs text-[#00D395]">Current</div>
+                    <div className="absolute right-10 bottom-12 text-xs text-gray-400">Target</div>
+                  </div>
+                  <div className="mt-4 text-xs text-gray-500">Curve illustration is for demo purposes only.</div>
                 </div>
               </div>
-
-              {overviewTab === 'overview' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <div>
-                    <div className="text-sm font-semibold text-white mb-4">Market Attributes</div>
-                    <div className="space-y-4 text-sm">
-                      <div className="flex justify-between border-b border-gray-800 pb-3">
-                        <span className="text-gray-400">Collateral</span>
-                        <span className="text-white font-medium">{collateralTicker}</span>
-                      </div>
-                      {collateralName && (
-                        <div className="flex justify-between border-b border-gray-800 pb-3">
-                          <span className="text-gray-400">Company</span>
-                          <span className="text-white font-medium">{collateralName}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between border-b border-gray-800 pb-3">
-                        <span className="text-gray-400">Loan</span>
-                        <span className="text-white font-medium">{selectedMarket.loan_asset}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Liquidation LTV</span>
-                        <span className="text-white font-medium">{selectedMarket.lltv}%</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4 text-sm">
-                    <div className="flex justify-between border-b border-gray-800 pb-3">
-                      <span className="text-gray-400">Oracle price</span>
-                      <span className="text-white font-medium">{oraclePriceDisplay}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-gray-800 pb-3">
-                      <span className="text-gray-400">Created on</span>
-                      <span className="text-white font-medium">{formattedCreatedDate}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Utilization</span>
-                      <span className="text-white font-medium">{formatPercent(selectedMarket.utilization)}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-10">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <div className="text-sm font-semibold text-white">IRM Breakdown</div>
-                      <div className="space-y-4 text-sm">
-                        <div className="flex justify-between border-b border-gray-800 pb-3">
-                          <span className="text-gray-400">Target utilization</span>
-                          <span className="text-white font-medium">{formatPercent(targetUtilization)}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-gray-800 pb-3">
-                          <span className="text-gray-400">Current utilization</span>
-                          <span className="text-white font-medium">{formatPercent(selectedMarket.utilization)}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-gray-800 pb-3">
-                          <span className="text-gray-400">Borrow amount to target utilization</span>
-                          <span className="text-white font-medium">{formatUSD(borrowAmountToTarget)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Interest rate model</span>
-                          <span className="text-white font-medium font-mono">
-                            {formatAddress(interestRateModel)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-[#0A0B0F] border border-gray-900 rounded-xl p-6 flex flex-col justify-between">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-sm font-semibold text-white">Utilization Curve</span>
-                        <span className="text-xs text-gray-500">Mock data</span>
-                      </div>
-                      <div className="relative h-40">
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#0052FF]/20 via-[#00D395]/10 to-[#FF5252]/20 rounded-lg" />
-                        <div className="absolute bottom-6 left-6 right-6 h-1 bg-gray-800 rounded" />
-                        <div className="absolute right-10 top-6 h-28 w-px bg-[#0052FF]/40" />
-                        <div className="absolute right-10 top-4 text-xs text-[#00D395]">Current</div>
-                        <div className="absolute right-10 bottom-12 text-xs text-gray-400">Target</div>
-                      </div>
-                      <div className="mt-4 text-xs text-gray-500">Curve illustration is for demo purposes only.</div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                      <div className="text-sm font-semibold text-white mb-4">Liquidations</div>
-                      <div className="space-y-4 text-sm">
-                        <div className="flex justify-between border-b border-gray-800 pb-3">
-                          <span className="text-gray-400">Liquidation Loan-To-Value (LLTV)</span>
-                          <span className="text-white font-medium">{selectedMarket.lltv}%</span>
-                        </div>
-                        <div className="flex justify-between border-b border-gray-800 pb-3">
-                          <span className="text-gray-400">Realized Bad Debt</span>
-                          <span className="text-white font-medium">{formatUSD(realizedBadDebt)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Unrealized Bad Debt</span>
-                          <span className="text-white font-medium">{formatUSD(unrealizedBadDebt)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-white mb-4">Liquidation Penalty</div>
-                      <div className="bg-[#0A0B0F] border border-gray-900 rounded-xl p-6">
-                        <div className="text-3xl font-bold text-[#FF5252]">{formatPercent(liquidationPenalty)}</div>
-                        <div className="text-sm text-gray-400 mt-2">Additional fee applied to liquidated positions.</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </section>
           </div>
 
           <div className="space-y-6 lg:pt-0">
             <section className="bg-[#161921] rounded-xl p-6 border border-gray-800">
               <div className="flex space-x-2 mb-6">
-                {(['borrow', 'repay', 'withdraw'] as InteractionTab[]).map((tab) => (
+                {(['borrow', 'repay'] as InteractionTab[]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -783,7 +810,9 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                       activeTab === tab ? 'text-[#0052FF] border-b-2 border-[#0052FF]' : 'text-gray-400'
                     }`}
                   >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    {tab === 'borrow'
+                      ? 'Deposit & Borrow'
+                      : 'Repay & Withdraw'}
                   </button>
                 ))}
               </div>
@@ -844,34 +873,55 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                     </div>
                   </div>
 
-                  <div className="bg-[#0A0B0F] rounded-lg p-4 space-y-2 text-sm">
-                    <div className="font-semibold text-white mb-2">Position Info</div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Collateral Value</span>
-                      <span className="text-white font-mono">{formatUSD(projectedCollateralValue)}</span>
+                  <div className="bg-[#0A0B0F] border border-gray-800 rounded-lg p-4 text-sm">
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Position Simulation</div>
+                    <div className="mt-3 grid grid-cols-3 text-xs uppercase tracking-wide text-gray-500">
+                      <span>Metric</span>
+                      <span>Current</span>
+                      <span>After</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Borrowed</span>
-                      <span className="text-white font-mono">{formatUSD(projectedBorrowed)}</span>
+                    <div className="mt-3 space-y-2">
+                      <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0F1118] px-4 py-3">
+                        <span className="text-gray-400">Collateral</span>
+                        <span className="font-mono text-white">{formatTokenAmount(currentCollateralAmount, collateralTicker)}</span>
+                        <span className="font-mono text-white">{formatTokenAmount(projectedCollateralAmount, collateralTicker)}</span>
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0F1118] px-4 py-3">
+                        <span className="text-gray-400">Loan</span>
+                        <span className="font-mono text-white">
+                          {`${formatUSD(currentLoanAmount).replace('$', '')} ${loanTicker}`}
+                        </span>
+                        <span className="font-mono text-white">
+                          {`${formatUSD(projectedLoanAmount).replace('$', '')} ${loanTicker}`}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0F1118] px-4 py-3">
+                        <span className="text-gray-400">LTV / LLTV</span>
+                        <span className="font-mono text-white">
+                          {`${formatPercent(currentBorrowLtv)} / ${selectedMarket.lltv}%`}
+                        </span>
+                        <span
+                          className={`font-mono ${
+                            projectedBorrowLtv > selectedMarket.lltv
+                              ? 'text-[#FF5252]'
+                              : projectedBorrowLtv > selectedMarket.lltv * 0.9
+                              ? 'text-[#FFB237]'
+                              : 'text-white'
+                          }`}
+                        >
+                          {`${formatPercent(projectedBorrowLtv)} / ${selectedMarket.lltv}%`}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0F1118] px-4 py-3">
+                        <span className="text-gray-400">Borrow Rate</span>
+                        <span className="font-mono text-white">{formatPercent(selectedMarket.borrow_apy)}</span>
+                        <span className="font-mono text-white">{formatPercent(selectedMarket.borrow_apy)}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">LTV</span>
-                      <span
-                        className={`font-semibold ${
-                          projectedLtv > 80 ? 'text-[#FF5252]' : projectedLtv > 70 ? 'text-[#FFB237]' : 'text-[#00D395]'
-                        }`}
-                      >
-                        {formatPercent(projectedLtv)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Max LTV</span>
-                      <span className="text-white">{selectedMarket.lltv}%</span>
-                    </div>
-                    {projectedLtv > 80 && (
+                    {projectedBorrowLtv > selectedMarket.lltv && (
                       <div className="flex items-start space-x-2 mt-3 p-2 bg-[#FF5252]/10 rounded">
                         <AlertTriangle className="text-[#FF5252] flex-shrink-0 mt-0.5" size={16} />
-                        <span className="text-[#FF5252] text-xs">High risk of liquidation</span>
+                        <span className="text-[#FF5252] text-xs">Borrow exceeds liquidation threshold.</span>
                       </div>
                     )}
                   </div>
@@ -909,41 +959,10 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{selectedMarket.loan_asset}</div>
                     </div>
                     <div className="flex items-center justify-between mt-2 text-sm">
-                      <span className="text-gray-400">
-                        Borrowed: {userPosition ? formatUSD(userPosition.borrow_assets) : '$0.00'}
-                      </span>
-                      {userPosition && (
-                        <button
-                          onClick={() => setRepayAmount(userPosition.borrow_assets.toString())}
-                          className="text-[#0052FF] hover:text-[#0046DD] font-medium"
-                        >
-                          MAX
-                        </button>
-                      )}
+                      <span className="text-gray-400">Borrowed: {formatUSD(displayBorrowAmount)}</span>
                     </div>
                   </div>
 
-                  {connectedAddress ? (
-                    <button
-                      onClick={handleRepay}
-                      disabled={
-                        !repayAmount ||
-                        !userPosition ||
-                        parseFloat(repayAmount) <= 0 ||
-                        parseFloat(repayAmount) > userPosition.borrow_assets
-                      }
-                      className="w-full py-3 bg-[#0052FF] hover:bg-[#0046DD] disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg font-medium transition-colors"
-                    >
-                      Repay
-                    </button>
-                  ) : (
-                    <div className="text-center text-gray-400 text-sm py-3">Connect wallet to repay</div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'withdraw' && (
-                <div className="space-y-4">
                   <div>
                     <label className="text-sm text-gray-400 block mb-2">Withdraw Collateral</label>
                     <div className="relative">
@@ -960,11 +979,15 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                     </div>
                     <div className="flex items-center justify-between mt-2 text-sm">
                       <span className="text-gray-400">
-                        Available: {userPosition ? userPosition.collateral.toFixed(4) : '0.00'} {collateralTicker}
+                        Available: {userPosition ? userPosition.collateral.toFixed(4) : displayCollateralAmount.toFixed(4)} {collateralTicker}
                       </span>
-                      {userPosition && (
+                      {(userPosition || displayCollateralAmount > 0) && (
                         <button
-                          onClick={() => setWithdrawColAmount(userPosition.collateral.toString())}
+                          onClick={() =>
+                            setWithdrawColAmount(
+                              (userPosition?.collateral ?? displayCollateralAmount).toString()
+                            )
+                          }
                           className="text-[#0052FF] hover:text-[#0046DD] font-medium"
                         >
                           MAX
@@ -973,44 +996,75 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                     </div>
                   </div>
 
+                  <div className="bg-[#0A0B0F] border border-gray-800 rounded-lg p-4 text-sm">
+                    <div className="text-xs uppercase tracking-wide text-gray-500">Position Simulation</div>
+                    <div className="mt-3 grid grid-cols-3 text-xs uppercase tracking-wide text-gray-500">
+                      <span>Metric</span>
+                      <span>Current</span>
+                      <span>After</span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0F1118] px-4 py-3">
+                        <span className="text-gray-400">Collateral</span>
+                        <span className="font-mono text-white">{formatTokenAmount(currentCollateralAmount, collateralTicker)}</span>
+                        <span className="font-mono text-white">{formatTokenAmount(projectedCollateralAfterRepay, collateralTicker)}</span>
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0F1118] px-4 py-3">
+                        <span className="text-gray-400">Loan</span>
+                        <span className="font-mono text-white">
+                          {`${formatUSD(currentLoanAmount).replace('$', '')} ${loanTicker}`}
+                        </span>
+                        <span className="font-mono text-white">
+                          {`${formatUSD(projectedLoanAfterRepay).replace('$', '')} ${loanTicker}`}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0F1118] px-4 py-3">
+                        <span className="text-gray-400">LTV / LLTV</span>
+                        <span className="font-mono text-white">
+                          {`${formatPercent(currentBorrowLtv)} / ${selectedMarket.lltv}%`}
+                        </span>
+                        <span
+                          className={`font-mono ${
+                            projectedBorrowLtvAfterRepay > selectedMarket.lltv
+                              ? 'text-[#FF5252]'
+                              : projectedBorrowLtvAfterRepay > selectedMarket.lltv * 0.9
+                              ? 'text-[#FFB237]'
+                              : 'text-white'
+                          }`}
+                        >
+                          {`${formatPercent(projectedBorrowLtvAfterRepay)} / ${selectedMarket.lltv}%`}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4 rounded-lg border border-gray-800 bg-[#0F1118] px-4 py-3">
+                        <span className="text-gray-400">Borrow Rate</span>
+                        <span className="font-mono text-white">{formatPercent(selectedMarket.borrow_apy)}</span>
+                        <span className="font-mono text-white">{formatPercent(selectedMarket.borrow_apy)}</span>
+                      </div>
+                    </div>
+                    {projectedBorrowLtvAfterRepay > selectedMarket.lltv && (
+                      <div className="flex items-start space-x-2 mt-3 p-2 bg-[#FF5252]/10 rounded">
+                        <AlertTriangle className="text-[#FF5252] flex-shrink-0 mt-0.5" size={16} />
+                        <span className="text-[#FF5252] text-xs">Borrow exceeds liquidation threshold.</span>
+                      </div>
+                    )}
+                  </div>
+
                   {connectedAddress ? (
                     <button
-                      onClick={handleWithdrawCollateral}
-                      disabled={
-                        !withdrawColAmount ||
-                        !userPosition ||
-                        parseFloat(withdrawColAmount) <= 0 ||
-                        parseFloat(withdrawColAmount) > userPosition.collateral
-                      }
+                      onClick={handleRepayAndWithdrawAction}
+                      disabled={combinedActionDisabled}
                       className="w-full py-3 bg-[#0052FF] hover:bg-[#0046DD] disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg font-medium transition-colors"
                     >
-                      Withdraw Collateral
+                      Repay &amp; Withdraw
                     </button>
                   ) : (
-                    <div className="text-center text-gray-400 text-sm py-3">Connect wallet to withdraw</div>
+                    <div className="text-center text-gray-400 text-sm py-3">Connect wallet to manage position</div>
                   )}
                 </div>
               )}
+
             </section>
 
-            <section className="bg-[#161921] rounded-xl p-6 border border-gray-800 space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Utilization</span>
-                <span className="text-white font-mono">{formatPercent(selectedMarket.utilization)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Max LTV</span>
-                <span className="text-white font-mono">{selectedMarket.lltv}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Oracle Price</span>
-                <span className="text-white font-mono">{formatUSD(selectedMarket.collateral_price)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Current LTV</span>
-                <span className="text-white font-mono">{formatPercent(currentLtv)}</span>
-              </div>
-            </section>
           </div>
         </div>
         )}
