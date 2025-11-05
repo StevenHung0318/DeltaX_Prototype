@@ -37,14 +37,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigateToMarket }) => {
   ];
 
   const referenceMarkets = markets.length ? markets : fallbackMarketBlueprints;
-  const referenceVaults = vaults.length ? vaults : fallbackVaultBlueprints;
-  const [modalState, setModalState] = useState<{
-    type: 'supply' | 'borrow';
-    marketId: string;
-    vaultId?: string | null;
-    vaultName?: string;
-    initialTab?: 'supply' | 'withdraw' | 'borrow' | 'repay';
-  } | null>(null);
+const referenceVaults = vaults.length ? vaults : fallbackVaultBlueprints;
+const [modalState, setModalState] = useState<{
+  type: 'supply' | 'borrow';
+  marketId: string;
+  vaultId?: string | null;
+  vaultName?: string;
+  initialTab?: 'supply' | 'withdraw' | 'borrow' | 'repay';
+} | null>(null);
+const [showLiquidations, setShowLiquidations] = useState(false);
 
   const hasSupplyPositions = userVaultPositions.length > 0;
   const supplyRows = hasSupplyPositions
@@ -116,7 +117,7 @@ const supplyWeightedApy = supplyTotalValue > 0
 const hasBorrowPositions = userMarketPositions.length > 0;
 const borrowRows = hasBorrowPositions
     ? userMarketPositions
-        .map((position) => {
+        .map((position, index) => {
           const market = markets.find((m) => m.id === position.market_id);
           if (!market) return null;
 
@@ -132,6 +133,9 @@ const borrowRows = hasBorrowPositions
           );
           const borrowApy = Number(market.borrow_apy ?? 0);
 
+          const overrideStatus = index === 0 ? 'safe' : index === 1 ? 'risk' : index === 2 ? 'warn' : null;
+          const overrideVariant = overrideStatus === 'safe' ? 'safe' : overrideStatus === 'risk' ? 'risk' : overrideStatus === 'warn' ? 'warn' : null;
+
           return {
             id: position.id,
             marketId: market.id,
@@ -139,22 +143,36 @@ const borrowRows = hasBorrowPositions
             collateralDisplay: `${position.collateral.toFixed(4)} ${market.collateral_asset} · ${formatUSD(collateralValue)}`,
             borrowedDisplay: `${formatUSD(borrowedValue).replace('$', '')} ${market.loan_asset}`,
             borrowedValueUSD: borrowedValue,
+            collateralValueUSD: collateralValue,
             ltvDisplay: formatPercent(ltv),
-            healthDisplay: healthFactor === Infinity ? '--' : healthFactor.toFixed(2),
-            healthVariant: healthFactor === Infinity ? 'neutral' : healthFactor > 2 ? 'safe' : healthFactor > 1.2 ? 'warn' : 'risk',
+            healthDisplay: (() => {
+              if (healthFactor === Infinity) return 'Safe';
+              if (ltv <= market.lltv * 0.6) return 'Safe';
+              if (ltv <= market.lltv * 0.85) return 'Risky';
+              return 'At risk';
+            })(),
+            healthVariant: (() => {
+              if (healthFactor === Infinity) return 'safe' as const;
+              if (ltv <= market.lltv * 0.6) return 'safe' as const;
+              if (ltv <= market.lltv * 0.85) return 'warn' as const;
+              return 'risk' as const;
+            })(),
             aprDisplay: formatPercent(borrowApy),
             aprValue: borrowApy,
             healthBreakdown: {
               lltv: market.lltv,
               ltv: formatPercent(ltv),
-              liquidationPrice: formatUSD(liquidationPrice)
+              liquidationPrice: formatUSD(liquidationPrice),
+              collateralPrice: formatUSD(collateralPrice)
             },
             loanDisplay: `${formatUSD(borrowedValue).replace('$', '')} ${market.loan_asset}`,
             loanAsset: market.loan_asset
           };
         })
         .filter((row): row is NonNullable<typeof row> => Boolean(row))
-    : referenceMarkets.slice(0, 2).map((market, index) => {
+    : referenceMarkets.slice(0, 3).map((market, index) => {
+        const overrideStatus = index === 0 ? 'safe' : index === 1 ? 'risk' : 'warn';
+        const overrideVariant = overrideStatus === 'safe' ? 'safe' : overrideStatus === 'risk' ? 'risk' : 'warn';
         const collateralAmount = index === 0 ? 62 : 38;
         const collateralPrice = market.collateral_price ?? 200;
         const collateralValue = collateralAmount * collateralPrice;
@@ -177,15 +195,30 @@ const borrowRows = hasBorrowPositions
           })} ${market.collateral_asset ?? 'AAPL'} · ${formatUSD(collateralValue)}`,
           borrowedDisplay: `${formatUSD(borrowedValue).replace('$', '')} ${market.loan_asset ?? 'USDC'}`,
           borrowedValueUSD: borrowedValue,
+          collateralValueUSD: collateralValue,
           ltvDisplay: formatPercent(ltv),
-          healthDisplay: healthFactor === Infinity ? '--' : healthFactor.toFixed(2),
-          healthVariant: healthFactor === Infinity ? 'neutral' : healthFactor > 2 ? 'safe' : healthFactor > 1.2 ? 'warn' : 'risk',
+          healthDisplay: (() => {
+            if (overrideStatus === 'safe') return 'Safe';
+            if (overrideStatus === 'risk') return 'At risk';
+            if (healthFactor === Infinity) return 'Safe';
+            if (ltv <= (market.lltv ?? 70) * 0.6) return 'Safe';
+            if (ltv <= (market.lltv ?? 70) * 0.85) return 'Risky';
+            return 'At risk';
+          })(),
+          healthVariant: (() => {
+            if (overrideVariant) return overrideVariant;
+            if (healthFactor === Infinity) return 'safe' as const;
+            if (ltv <= (market.lltv ?? 70) * 0.6) return 'safe' as const;
+            if (ltv <= (market.lltv ?? 70) * 0.85) return 'warn' as const;
+            return 'risk' as const;
+          })(),
           aprDisplay: formatPercent(borrowApy),
           aprValue: borrowApy,
           healthBreakdown: {
             lltv: market.lltv ?? 70,
             ltv: formatPercent(ltv),
-            liquidationPrice: formatUSD(liquidationPrice)
+            liquidationPrice: formatUSD(liquidationPrice),
+            collateralPrice: formatUSD(collateralPrice)
           },
           loanDisplay: `${formatUSD(borrowedValue).replace('$', '')} ${market.loan_asset ?? 'USDC'}`,
           loanAsset: market.loan_asset ?? 'USDC'
@@ -196,6 +229,8 @@ const borrowTotalValue = borrowRows.reduce((sum, row) => sum + row.borrowedValue
 const borrowWeightedApr = borrowTotalValue > 0
   ? borrowRows.reduce((sum, row) => sum + row.borrowedValueUSD * (row.aprValue ?? 0), 0) / borrowTotalValue
   : 0;
+const totalCollateralValue = borrowRows.reduce((sum, row) => sum + (row.collateralValueUSD ?? 0), 0);
+const netBorrowValue = totalCollateralValue - borrowTotalValue;
 
 const activeMarket = useMemo<Market | null>(() => {
   if (!modalState?.marketId) return null;
@@ -215,41 +250,11 @@ const activeVault = useMemo<Vault | null>(() => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Protocol Overview</h1>
-        <p className="text-gray-400">Morpho-style isolated lending markets</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-[#161921] rounded-xl p-6 border border-gray-800">
-          <div className="text-gray-400 text-sm mb-2">Total Supplied</div>
-          <div className="text-3xl font-bold text-white font-mono">{formatUSD(supplyTotalValue)}</div>
-        </div>
-
-        <div className="bg-[#161921] rounded-xl p-6 border border-gray-800">
-          <div className="text-gray-400 text-sm mb-2">Average Supply APY</div>
-          <div className="text-3xl font-bold text-white font-mono">
-            {supplyTotalValue > 0 ? formatPercent(supplyWeightedApy) : '--'}
-          </div>
-        </div>
-
-        <div className="bg-[#161921] rounded-xl p-6 border border-gray-800">
-          <div className="text-gray-400 text-sm mb-2">Total Borrowed</div>
-          <div className="text-3xl font-bold text-white font-mono">{formatUSD(borrowTotalValue)}</div>
-        </div>
-
-        <div className="bg-[#161921] rounded-xl p-6 border border-gray-800">
-          <div className="text-gray-400 text-sm mb-2">Average Borrow Rate</div>
-          <div className="text-3xl font-bold text-white font-mono">
-            {borrowTotalValue > 0 ? formatPercent(borrowWeightedApr) : '--'}
-          </div>
-        </div>
+        <h1 className="text-3xl font-bold text-white mb-2">Position Overview</h1>
       </div>
 
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-white">Your Positions</h2>
-        
-        <div className="space-y-6">
-          <section className="bg-[#161921] border border-gray-800 rounded-xl">
+        <section className="bg-[#161921] border border-gray-800 rounded-xl">
             <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
               <div>
                 <div className="flex items-center gap-2 text-white font-semibold">
@@ -259,6 +264,18 @@ const activeVault = useMemo<Vault | null>(() => {
                 <p className="text-xs text-gray-500 mt-1">Current lending deposits and vault exposure.</p>
               </div>
             </header>
+            <div className="px-6 pt-4 pb-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+                <div className="text-xs uppercase tracking-wide text-gray-500">Total Supplied</div>
+                <div className="mt-2 text-xl font-bold text-white font-mono">{formatUSD(supplyTotalValue)}</div>
+              </div>
+              <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+                <div className="text-xs uppercase tracking-wide text-gray-500">Average Supply APY</div>
+                <div className="mt-2 text-xl font-bold text-white font-mono">
+                  {supplyTotalValue > 0 ? formatPercent(supplyWeightedApy) : '--'}
+                </div>
+              </div>
+            </div>
             <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full table-fixed text-sm">
                 <thead className="bg-[#0A0B0F] text-xs uppercase tracking-wide text-gray-500">
@@ -365,24 +382,51 @@ const activeVault = useMemo<Vault | null>(() => {
             </div>
           </section>
 
-          <section className="bg-[#161921] border border-gray-800 rounded-xl">
-            <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
-              <div>
-                <div className="flex items-center gap-2 text-white font-semibold">
-                  <TrendingUp size={18} className="text-[#FFB237]" />
-                  <span>Borrow Positions</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Loans backed by supplied collateral.</p>
+        <section className="bg-[#161921] border border-gray-800 rounded-xl">
+          <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+            <div>
+              <div className="flex items-center gap-2 text-white font-semibold">
+                <TrendingUp size={18} className="text-[#FFB237]" />
+                <span>Borrow Positions</span>
               </div>
-            </header>
-            <div className="overflow-x-auto">
+              <p className="text-xs text-gray-500 mt-1">Loans backed by supplied collateral.</p>
+            </div>
+            <button
+              onClick={() => setShowLiquidations(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-[#2A3042] px-3 py-2 text-xs font-medium text-white hover:bg-[#1F2330] transition-colors"
+            >
+              <span>Liquidation History</span>
+              <ArrowRight size={14} />
+            </button>
+          </header>
+          <div className="px-6 pt-4 pb-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+              <div className="text-xs uppercase tracking-wide text-gray-500">Total Collateral Value</div>
+              <div className="mt-2 text-xl font-bold text-white font-mono">{formatUSD(totalCollateralValue)}</div>
+            </div>
+            <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+              <div className="text-xs uppercase tracking-wide text-gray-500">Total Borrowed</div>
+              <div className="mt-2 text-xl font-bold text-white font-mono">{formatUSD(borrowTotalValue)}</div>
+            </div>
+            <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+              <div className="text-xs uppercase tracking-wide text-gray-500">Average Borrow Rate</div>
+              <div className="mt-2 text-xl font-bold text-white font-mono">
+                {borrowTotalValue > 0 ? formatPercent(borrowWeightedApr) : '--'}
+              </div>
+            </div>
+            <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+              <div className="text-xs uppercase tracking-wide text-gray-500">Total Net Value</div>
+              <div className="mt-2 text-xl font-bold text-white font-mono">{formatUSD(netBorrowValue)}</div>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
               <table className="min-w-full table-fixed text-sm">
                 <thead className="bg-[#0A0B0F] text-xs uppercase tracking-wide text-gray-500">
                   <tr>
                     <th className="px-6 py-3 text-left font-medium w-[24%]">Market</th>
                     <th className="px-6 py-3 text-left font-medium w-[20%]">Collateral</th>
                     <th className="px-6 py-3 text-left font-medium w-[20%]">Loan</th>
-                    <th className="px-6 py-3 text-left font-medium w-[18%]">Health</th>
+                    <th className="px-6 py-3 text-left font-medium w-[18%]">Status</th>
                     <th className="px-6 py-3 text-left font-medium w-[12%]">Borrow Rate</th>
                     <th className="px-6 py-3 text-left font-medium w-[6%]">Action</th>
                   </tr>
@@ -401,13 +445,13 @@ const activeVault = useMemo<Vault | null>(() => {
                         <td className="px-6 py-4 w-[20%] align-top text-left text-white font-mono">{row.loanDisplay}</td>
                         <td className="px-6 py-4 w-[18%] align-top text-left">
                           <span
-                            className={`relative font-mono ${healthColor} cursor-help group`}
+                            className={`relative font-medium ${healthColor} cursor-help group`}
                           >
                             {row.healthDisplay}
-                            <span className="pointer-events-none absolute left-1/2 top-full z-20 hidden w-48 -translate-x-1/2 translate-y-2 rounded-lg border border-gray-700 bg-[#0B0E15] p-3 text-xs text-gray-200 shadow-lg group-hover:block">
-                              <span className="block text-gray-400">LLTV: {row.healthBreakdown.lltv}%</span>
-                              <span className="block text-gray-400">LTV: {row.healthBreakdown.ltv}</span>
-                              <span className="block text-gray-400">Liquidation: {row.healthBreakdown.liquidationPrice}</span>
+                            <span className="pointer-events-none absolute left-1/2 top-full z-20 hidden w-56 -translate-x-1/2 translate-y-2 rounded-lg border border-gray-700 bg-[#0B0E15] p-3 text-xs text-gray-200 shadow-lg group-hover:block">
+                              <span className="block text-gray-400">LTV / LLTV: {row.healthBreakdown.ltv} / {row.healthBreakdown.lltv}%</span>
+                              <span className="block text-gray-400">Col. Market Price: {row.healthBreakdown.collateralPrice}</span>
+                              <span className="block text-gray-400">Col. Liquidation Price: {row.healthBreakdown.liquidationPrice}</span>
                             </span>
                           </span>
                         </td>
@@ -497,8 +541,82 @@ const activeVault = useMemo<Vault | null>(() => {
               })}
             </div>
           </section>
-        </div>
       </div>
+
+      {showLiquidations && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="bg-[#161921] border border-gray-800 rounded-xl shadow-2xl max-w-3xl w-full">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+              <h3 className="text-lg font-semibold text-white">Liquidation History</h3>
+              <button
+                onClick={() => setShowLiquidations(false)}
+                className="text-gray-400 hover:text-white transition-colors text-sm"
+              >
+                Close
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-[#0A0B0F] text-xs uppercase tracking-wide text-gray-500">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-medium w-[16%]">Date</th>
+                    <th className="px-6 py-3 text-left font-medium w-[20%]">Market</th>
+                    <th className="px-6 py-3 text-left font-medium w-[18%]">Liquidation Price</th>
+                    <th className="px-6 py-3 text-left font-medium w-[18%]">Collateral Liquidated</th>
+                    <th className="px-6 py-3 text-left font-medium w-[18%]">Loan Repaid</th>
+                    <th className="px-6 py-3 text-left font-medium w-[10%]">Txn</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    {
+                      date: '2025-07-18 14:32',
+                      market: 'SUIG / USDC',
+                      price: '$9.82',
+                      collateral: '45.2 SUIG',
+                      repaid: '410 USDC',
+                      tx: '0xa91b...4e90'
+                    },
+                    {
+                      date: '2025-05-02 09:11',
+                      market: 'AAPL / USDC',
+                      price: '$112.45',
+                      collateral: '12.1 AAPL',
+                      repaid: '1.4K USDC',
+                      tx: '0xb42c...d112'
+                    },
+                    {
+                      date: '2024-12-19 22:48',
+                      market: 'NVDA / USDC',
+                      price: '$312.88',
+                      collateral: '3.4 NVDA',
+                      repaid: '980 USDC',
+                      tx: '0xc53d...7f34'
+                    }
+                  ].map((entry) => (
+                    <tr key={entry.tx} className="border-b border-gray-800 last:border-b-0">
+                      <td className="px-6 py-3 text-gray-300">{entry.date}</td>
+                      <td className="px-6 py-3 text-white font-medium">{entry.market}</td>
+                      <td className="px-6 py-3 text-white font-mono">{entry.price}</td>
+                      <td className="px-6 py-3 text-white font-mono">{entry.collateral}</td>
+                      <td className="px-6 py-3 text-white font-mono">{entry.repaid}</td>
+                      <td className="px-6 py-3 text-[#4C8FFF] font-mono">
+                        <button
+                          className="hover:underline"
+                          onClick={() => navigator.clipboard.writeText(entry.tx)}
+                          title="Copy transaction hash"
+                        >
+                          {entry.tx}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       <MarketActionModal
         type={modalState?.type ?? 'supply'}

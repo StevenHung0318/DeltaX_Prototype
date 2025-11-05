@@ -58,6 +58,65 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
   const [supplyActionTab, setSupplyActionTab] = useState<'supply' | 'withdraw'>('supply');
   const [vaultSupplyAmount, setVaultSupplyAmount] = useState('');
   const [vaultWithdrawAmount, setVaultWithdrawAmount] = useState('');
+  const [transactionModal, setTransactionModal] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+  }>({
+    open: false,
+    title: '',
+    description: ''
+  });
+
+  useEffect(() => {
+    let timeoutId: number | undefined;
+    if (transactionModal.open) {
+      timeoutId = window.setTimeout(() => {
+        setTransactionModal((prev) => ({
+          ...prev,
+          open: false
+        }));
+      }, 2000);
+    }
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [transactionModal.open]);
+
+  const closeTransactionModal = () => {
+    setTransactionModal((prev) => ({
+      ...prev,
+      open: false
+    }));
+  };
+
+  const showTransactionModal = (title: string, description: string) => {
+    setTransactionModal({
+      open: true,
+      title,
+      description
+    });
+  };
+
+  const transactionToast = transactionModal.open ? (
+    <div className="fixed top-6 right-6 z-50">
+      <div className="bg-[#161921] border border-gray-700 rounded-lg shadow-lg px-5 py-4 space-y-2 w-72">
+        <div className="flex items-start justify-between">
+          <h3 className="text-sm font-semibold text-white">{transactionModal.title}</h3>
+          <button
+            onClick={closeTransactionModal}
+            className="text-gray-500 hover:text-white transition-colors text-xs"
+            aria-label="Close notification"
+          >
+            ✕
+          </button>
+        </div>
+        <p className="text-xs text-gray-400 text-left leading-relaxed">{transactionModal.description}</p>
+      </div>
+    </div>
+  ) : null;
 
   const selectedMarket = selectedMarketId ? markets.find((m) => m.id === selectedMarketId) || null : null;
   const userPosition = selectedMarketId ? userMarketPositions.find((p) => p.market_id === selectedMarketId) : null;
@@ -79,6 +138,8 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
       ? calculateProjectedEarnings(userVaultPosition.assets, primaryVault.apy)
       : null;
 
+  const mockEthBalance = 5.25;
+  const mockUsdcBalance = 10000;
   const vaultApy = primaryVault?.apy ?? 0;
   const currentDeposit = userVaultPosition?.assets ?? 0;
   const supplyInputAmount = supplyActionTab === 'supply' ? Number(vaultSupplyAmount || 0) : 0;
@@ -88,6 +149,26 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
     : currentDeposit + (isNaN(supplyInputAmount) ? 0 : supplyInputAmount);
   const currentYieldEstimate = calculateProjectedEarnings(currentDeposit, vaultApy);
   const simulatedYieldEstimate = calculateProjectedEarnings(simulatedDeposit, vaultApy);
+  const supplyAmountValue = parseFloat(vaultSupplyAmount || '0');
+  const supplyAmountError =
+    supplyActionTab === 'supply' && vaultSupplyAmount
+      ? supplyAmountValue <= 0
+        ? 'Enter an amount greater than 0'
+        : supplyAmountValue > mockUsdcBalance
+          ? `Exceeds wallet balance (${formatUSD(mockUsdcBalance).replace('$', '')} USDC)`
+          : undefined
+      : undefined;
+  const withdrawVaultAmountValue = parseFloat(vaultWithdrawAmount || '0');
+  const withdrawVaultError =
+    supplyActionTab === 'withdraw' && vaultWithdrawAmount
+      ? withdrawVaultAmountValue <= 0
+        ? 'Enter an amount greater than 0'
+        : userVaultPosition
+          ? withdrawVaultAmountValue > userVaultPosition.assets
+            ? `Exceeds available balance (${formatUSD(userVaultPosition.assets).replace('$', '')} USDC)`
+            : undefined
+          : 'No supply balance available'
+      : undefined;
 
   const formatDateLabel = (value?: string) =>
     value ? new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '--';
@@ -155,9 +236,6 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
   };
 
   const marketPageDescription = 'Browse markets to supply liquidity or borrow against collateral.';
-
-  const mockEthBalance = 5.25;
-  const mockUsdcBalance = 10000;
 
   const collateralValue = userPosition ? userPosition.collateral * (selectedMarket?.collateral_price || 0) : 0;
   const currentBorrowed = userPosition ? userPosition.borrow_assets : 0;
@@ -251,22 +329,34 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
     const colAmount = parseFloat(collateralAmount) || 0;
     const borAmount = parseFloat(borrowAmount) || 0;
 
-    if (colAmount < 0 || borAmount <= 0) return;
+    if (colAmount <= 0 || borAmount <= 0) return;
     if (colAmount > mockEthBalance) return;
     if (borAmount > availableToBorrow) return;
 
     await borrow(selectedMarketId, colAmount, borAmount);
     setCollateralAmount('');
     setBorrowAmount('');
+    if (selectedMarket) {
+      showTransactionModal(
+        'Transaction sent',
+        `Supplied ${colAmount.toFixed(2)} ${selectedMarket.collateral_asset} and borrowed ${borAmount.toFixed(2)} ${selectedMarket.loan_asset} in the ${selectedMarket.display_name ?? `${selectedMarket.collateral_asset} Market`}.`
+      );
+    }
   };
 
   const handleRepay = async () => {
     if (!selectedMarketId || !repayAmount || !userPosition) return;
     const amount = parseFloat(repayAmount);
-    if (amount <= 0 || amount > userPosition.borrow_assets) return;
+    if (amount <= 0 || amount > userPosition.borrow_assets || amount > mockUsdcBalance) return;
 
     await repay(selectedMarketId, amount);
     setRepayAmount('');
+    if (selectedMarket) {
+      showTransactionModal(
+        'Transaction sent',
+        `Repaid ${amount.toFixed(2)} ${selectedMarket.loan_asset} in the ${selectedMarket.display_name ?? `${selectedMarket.collateral_asset} Market`}.`
+      );
+    }
   };
 
   const handleWithdrawCollateral = async () => {
@@ -276,6 +366,12 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
 
     await withdrawCollateral(selectedMarketId, amount);
     setWithdrawColAmount('');
+    if (selectedMarket) {
+      showTransactionModal(
+        'Transaction sent',
+        `Withdrew ${amount.toFixed(2)} ${selectedMarket.collateral_asset} from the ${selectedMarket.display_name ?? `${selectedMarket.collateral_asset} Market`}.`
+      );
+    }
   };
 
   const handleRepayAndWithdrawAction = async () => {
@@ -284,7 +380,11 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
     const repayValue = parseFloat(repayAmount || '0');
     const withdrawValue = parseFloat(withdrawColAmount || '0');
 
-    const canRepay = !!userPosition && repayValue > 0 && repayValue <= userPosition.borrow_assets;
+    const canRepay =
+      !!userPosition &&
+      repayValue > 0 &&
+      repayValue <= userPosition.borrow_assets &&
+      repayValue <= mockUsdcBalance;
     const canWithdraw = !!userPosition && withdrawValue > 0 && withdrawValue <= userPosition.collateral;
 
     if (canRepay) {
@@ -302,6 +402,13 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
 
     await supplyToVault(primaryVault.id, amount);
     setVaultSupplyAmount('');
+    const marketName = selectedMarket
+      ? selectedMarket.display_name ?? `${selectedMarket.collateral_asset} Market`
+      : primaryVault.name;
+    showTransactionModal(
+      'Transaction sent',
+      `Supplied ${formatUSD(amount).replace('$', '')} ${primaryVault.asset} to the ${marketName}.`
+    );
   };
 
   const defaultViewMode = markets.length <= 4 ? 'card' : 'table';
@@ -326,6 +433,13 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
 
     await withdrawFromVault(primaryVault.id, amount);
     setVaultWithdrawAmount('');
+    const marketName = selectedMarket
+      ? selectedMarket.display_name ?? `${selectedMarket.collateral_asset} Market`
+      : primaryVault.name;
+    showTransactionModal(
+      'Transaction sent',
+      `Withdrew ${formatUSD(amount).replace('$', '')} ${primaryVault.asset} from the ${marketName}.`
+    );
   };
 
   if (selectedMarket) {
@@ -337,10 +451,8 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
       `${amount.toLocaleString(undefined, { maximumFractionDigits: 4, minimumFractionDigits: 0 })} ${symbol}`;
     const currentCollateralAmount = displayCollateralAmount;
     const currentLoanAmount = displayBorrowAmount;
-    const collateralInputValue = Number(collateralAmount) || 0;
-    const borrowInputValue = Number(borrowAmount) || 0;
-    const projectedCollateralAmount = Math.max(0, currentCollateralAmount + collateralInputValue);
-    const projectedLoanAmount = Math.max(0, currentLoanAmount + borrowInputValue);
+    const projectedCollateralAmount = Math.max(0, currentCollateralAmount + (Number(collateralAmount) || 0));
+    const projectedLoanAmount = Math.max(0, currentLoanAmount + (Number(borrowAmount) || 0));
     const collateralPrice = selectedMarket.collateral_price || 0;
     const projectedCollateralUsd = projectedCollateralAmount * collateralPrice;
     const currentBorrowLtv = displayLtv;
@@ -355,14 +467,50 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
     const loanMarketPrice = selectedMarket.loan_asset === 'USDC' ? 1 : selectedMarket.collateral_price || 0;
     const repayValueNumber = parseFloat(repayAmount || '0');
     const withdrawValueNumber = parseFloat(withdrawColAmount || '0');
-    const canRepayAction =
-      !!userPosition && repayValueNumber > 0 && repayValueNumber <= userPosition.borrow_assets;
-    const canWithdrawAction =
-      !!userPosition && withdrawValueNumber > 0 && withdrawValueNumber <= userPosition.collateral;
-    const combinedActionDisabled = !canRepayAction && !canWithdrawAction;
-
+    const collateralInputValue = parseFloat(collateralAmount || '0');
+    const collateralError = collateralAmount
+      ? collateralInputValue <= 0
+        ? 'Enter an amount greater than 0'
+        : collateralInputValue > mockEthBalance
+          ? `Exceeds wallet balance (${mockEthBalance.toFixed(2)} ${collateralTicker})`
+          : undefined
+      : undefined;
+    const borrowInputValue = parseFloat(borrowAmount || '0');
+    const borrowError = borrowAmount
+      ? borrowInputValue <= 0
+        ? 'Enter an amount greater than 0'
+        : borrowInputValue > Math.max(availableToBorrow, 0)
+          ? `Exceeds max borrow (${formatUSD(Math.max(availableToBorrow, 0))})`
+          : undefined
+      : undefined;
+    const borrowedBalance = userPosition?.borrow_assets ?? 0;
+    const repayError = repayAmount
+      ? repayValueNumber <= 0
+        ? 'Enter an amount greater than 0'
+        : borrowedBalance <= 0
+          ? 'No borrowed balance to repay'
+          : repayValueNumber > borrowedBalance
+            ? `Exceeds borrowed balance (${formatUSD(borrowedBalance)})`
+            : repayValueNumber > mockUsdcBalance
+              ? `Exceeds wallet balance (${formatUSD(mockUsdcBalance)})`
+              : undefined
+      : undefined;
+    const availableCollateral = userPosition?.collateral ?? 0;
+    const withdrawCollateralError = withdrawColAmount
+      ? withdrawValueNumber <= 0
+        ? 'Enter an amount greater than 0'
+        : availableCollateral <= 0
+          ? 'No collateral available to withdraw'
+          : withdrawValueNumber > availableCollateral
+            ? `Exceeds available collateral (${availableCollateral.toFixed(4)} ${collateralTicker})`
+            : undefined
+      : undefined;
+    const repayValid = !!repayAmount && !repayError;
+    const withdrawValid = !!withdrawColAmount && !withdrawCollateralError;
+    const combinedActionDisabled = !repayValid && !withdrawValid;
     return (
       <div className="space-y-8">
+        {transactionToast}
         <button
           onClick={() => onSelectMarket(null)}
           className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
@@ -378,11 +526,6 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
               <h1 className="text-3xl font-bold text-white">
                 {collateralLabel} / {selectedMarket.loan_asset} Market
               </h1>
-              <div className="flex items-center space-x-3 text-gray-400">
-                <span>LLTV: {selectedMarket.lltv}%</span>
-                <span>|</span>
-                <span>Oracle: Chainlink</span>
-              </div>
             </div>
           </div>
         </header>
@@ -406,20 +549,11 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
               <div className="lg:col-span-2 space-y-8">
                 <section className="bg-[#161921] rounded-xl p-6 border border-gray-800">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-white">Liquidity Overview</h3>
-                      <p className="text-sm text-gray-400">
-                        USDC supplied to the {collateralLabel} market powers borrower demand.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 bg-[#0A0B0F] border border-[#1F2330] rounded-full px-4 py-2">
-                      <TrendingUp size={18} className="text-[#00D395]" />
-                      <div className="leading-tight">
-                        <div className="text-xs uppercase tracking-wide text-gray-500">Supply APY</div>
-                        <div className="text-sm font-semibold text-white">{formatPercent(primaryVault.apy)}</div>
-                      </div>
-                    </div>
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-xl font-semibold text-white">Liquidity Overview</h3>
+                    <p className="text-sm text-gray-400">
+                      USDC supplied to the {collateralLabel} market powers borrower demand.
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6">
@@ -436,9 +570,9 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                       </div>
                     </div>
                     <div className="bg-[#0A0B0F] border border-[#1F2330] rounded-xl p-5">
-                      <div className="text-xs uppercase tracking-wide text-gray-500">Borrowed Out</div>
+                      <div className="text-xs uppercase tracking-wide text-gray-500">Supply APY</div>
                       <div className="mt-2 text-3xl font-bold text-white font-mono">
-                        {`${formatUSD(borrowedLiquidity).replace('$', '')} USDC`}
+                        {formatPercent(primaryVault.apy)}
                       </div>
                     </div>
                   </div>
@@ -550,12 +684,15 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                             MAX
                           </button>
                         </div>
+                        {supplyAmountError && (
+                          <p className="mt-2 text-xs text-[#FF5252]">{supplyAmountError}</p>
+                        )}
                       </div>
 
                       {connectedAddress ? (
                         <button
                           onClick={handleVaultSupply}
-                          disabled={!vaultSupplyAmount || parseFloat(vaultSupplyAmount) <= 0}
+                          disabled={!vaultSupplyAmount || !!supplyAmountError}
                           className="w-full py-3 bg-[#0052FF] hover:bg-[#0046DD] disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg font-medium transition-colors"
                         >
                           Supply USDC
@@ -591,6 +728,9 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                             </button>
                           )}
                         </div>
+                        {withdrawVaultError && (
+                          <p className="mt-2 text-xs text-[#FF5252]">{withdrawVaultError}</p>
+                        )}
                       </div>
 
                       {connectedAddress ? (
@@ -598,9 +738,7 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                           onClick={handleVaultWithdraw}
                           disabled={
                             !vaultWithdrawAmount ||
-                            !userVaultPosition ||
-                            parseFloat(vaultWithdrawAmount) <= 0 ||
-                            parseFloat(vaultWithdrawAmount) > userVaultPosition.assets
+                            !!withdrawVaultError
                           }
                           className="w-full py-3 bg-[#0052FF] hover:bg-[#0046DD] disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg font-medium transition-colors"
                         >
@@ -711,9 +849,9 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs uppercase tracking-wide text-gray-500">Utilization Rate</div>
-                  <div className="mt-2 text-2xl font-semibold text-white font-mono">
-                    {formatPercent(selectedMarket.utilization)}
+                  <div className="text-xs uppercase tracking-wide text-gray-500">Borrow Rate</div>
+                  <div className="mt-2 text-2xl font-semibold text-[#FFB237] font-mono">
+                    {formatPercent(selectedMarket.borrow_apy)}
                   </div>
                 </div>
               </div>
@@ -844,6 +982,9 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                         MAX
                       </button>
                     </div>
+                    {collateralError && (
+                      <p className="mt-2 text-xs text-[#FF5252]">{collateralError}</p>
+                    )}
                   </div>
 
                   <div>
@@ -871,6 +1012,9 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                         MAX
                       </button>
                     </div>
+                    {borrowError && (
+                      <p className="mt-2 text-xs text-[#FF5252]">{borrowError}</p>
+                    )}
                   </div>
 
                   <div className="bg-[#0A0B0F] border border-gray-800 rounded-lg p-4 text-sm">
@@ -930,9 +1074,11 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                     <button
                       onClick={handleBorrow}
                       disabled={
+                        !connectedAddress ||
+                        !collateralAmount ||
                         !borrowAmount ||
-                        parseFloat(borrowAmount) <= 0 ||
-                        parseFloat(borrowAmount) > availableToBorrow
+                        !!collateralError ||
+                        !!borrowError
                       }
                       className="w-full py-3 bg-[#0052FF] hover:bg-[#0046DD] disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg font-medium transition-colors"
                     >
@@ -961,6 +1107,9 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                     <div className="flex items-center justify-between mt-2 text-sm">
                       <span className="text-gray-400">Borrowed: {formatUSD(displayBorrowAmount)}</span>
                     </div>
+                    {repayError && (
+                      <p className="mt-2 text-xs text-[#FF5252]">{repayError}</p>
+                    )}
                   </div>
 
                   <div>
@@ -994,6 +1143,9 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                         </button>
                       )}
                     </div>
+                    {withdrawCollateralError && (
+                      <p className="mt-2 text-xs text-[#FF5252]">{withdrawCollateralError}</p>
+                    )}
                   </div>
 
                   <div className="bg-[#0A0B0F] border border-gray-800 rounded-lg p-4 text-sm">
@@ -1074,6 +1226,7 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
 
   return (
     <div className="space-y-8">
+      {transactionToast}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Markets</h1>

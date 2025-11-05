@@ -7,7 +7,7 @@ import { Markets } from './pages/Markets';
 type Page = 'dashboard' | 'markets';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+  const [currentPage, setCurrentPage] = useState<Page>('markets');
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
 
   const handleNavigate = (page: Page) => {
