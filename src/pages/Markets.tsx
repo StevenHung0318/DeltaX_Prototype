@@ -585,7 +585,7 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                   </div>
 
                   {userVaultPosition ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
                       <div>
                         <div className="text-xs uppercase tracking-wide text-gray-500">Supplied</div>
                         <div className="mt-2 text-2xl font-semibold text-white font-mono">
@@ -597,6 +597,10 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                         <div className="mt-2 text-2xl font-semibold text-white font-mono">
                           {formatPercent(primaryVault.apy)}
                         </div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-gray-500">Realized Yield</div>
+                        <div className="mt-2 text-2xl font-semibold text-white font-mono">234 USDC</div>
                       </div>
                       <div>
                         <div className="text-xs uppercase tracking-wide text-gray-500">Est. Yearly Yield</div>
