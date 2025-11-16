@@ -157,46 +157,55 @@ export const ProtocolProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         supabase.from('markets').select('*')
       ]);
 
+      if (vaultsRes.error) {
+        console.error('Error loading vaults:', vaultsRes.error);
+      }
+      if (marketsRes.error) {
+        console.error('Error loading markets:', marketsRes.error);
+      }
+
       if (vaultsRes.data) setVaults(vaultsRes.data);
-      if (marketsRes.data) {
-        const baseMarkets = marketsRes.data.length > 0 ? marketsRes.data : STOCK_MARKETS.map((stock, index) => ({
-          id: `mock-base-${stock.ticker}-${index}`,
+
+      const baseMarkets =
+        marketsRes.data && marketsRes.data.length > 0
+          ? marketsRes.data
+          : STOCK_MARKETS.map((stock, index) => ({
+              id: `mock-base-${stock.ticker}-${index}`,
+              collateral_asset: stock.ticker,
+              display_name: stock.name,
+              loan_asset: 'USDC',
+              lltv: stock.lltv,
+              total_size: stock.totalSize,
+              total_borrowed: stock.totalBorrowed,
+              borrow_apy: stock.borrowApy,
+              supply_apy: stock.supplyApy ?? 0,
+              utilization: stock.utilization,
+              oracle_address: '',
+              collateral_price: stock.price,
+              created_at: new Date().toISOString(),
+              logo: stock.logo
+            }));
+
+      const transformedMarkets = STOCK_MARKETS.map((stock, index) => {
+        const template = baseMarkets[index % baseMarkets.length];
+        return {
+          ...template,
+          id: `mock-${stock.ticker}`,
           collateral_asset: stock.ticker,
           display_name: stock.name,
           loan_asset: 'USDC',
-          lltv: stock.lltv,
+          collateral_price: stock.price,
           total_size: stock.totalSize,
           total_borrowed: stock.totalBorrowed,
           borrow_apy: stock.borrowApy,
-          supply_apy: stock.supplyApy ?? 0,
+          supply_apy: stock.supplyApy,
           utilization: stock.utilization,
-          oracle_address: '',
-          collateral_price: stock.price,
-          created_at: new Date().toISOString(),
+          lltv: stock.lltv,
           logo: stock.logo
-        } as Market));
+        };
+      });
 
-        const transformedMarkets = STOCK_MARKETS.map((stock, index) => {
-          const template = baseMarkets[index % baseMarkets.length];
-          return {
-            ...template,
-            id: `mock-${stock.ticker}`,
-            collateral_asset: stock.ticker,
-            display_name: stock.name,
-            loan_asset: 'USDC',
-            collateral_price: stock.price,
-            total_size: stock.totalSize,
-            total_borrowed: stock.totalBorrowed,
-            borrow_apy: stock.borrowApy,
-            supply_apy: stock.supplyApy,
-            utilization: stock.utilization,
-            lltv: stock.lltv,
-            logo: stock.logo
-          };
-        });
-
-        setMarkets(transformedMarkets);
-      }
+      setMarkets(transformedMarkets);
     } catch (error) {
       console.error('Error loading protocol data:', error);
     } finally {
