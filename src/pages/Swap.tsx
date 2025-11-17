@@ -76,6 +76,29 @@ export const Swap = () => {
 
   const payBalance = balances[payToken.symbol] ?? 0;
   const receiveBalance = balances[receiveToken.symbol] ?? 0;
+  const mockLimitOrders = [
+    {
+      id: 'limit-1',
+      fromToken: 'USDC',
+      toToken: 'SUI',
+      amountFrom: 6,
+      amountTo: 3.75,
+      price: '1.6 USDC per SUI',
+      filled: '0/6 USDC (0%)',
+      expiry: '2025-11-24 03:52:08 (UTC)'
+    }
+  ];
+
+  const mockDcaOrders = [
+    {
+      id: 'dca-1',
+      fromToken: 'USDC',
+      toToken: 'SUI',
+      priceRange: '1.3 – 1.35 USDC per SUI',
+      filled: '0 USDC / 8 USDC (0%)',
+      nextOrder: '2025-11-17 09:47'
+    }
+  ];
 
   const insufficientBalance = parseAmount(payAmount) > payBalance;
 
@@ -507,6 +530,39 @@ export const Swap = () => {
         >
           {parsedAmount <= 0 ? 'Enter an amount' : 'Place Limit Order'}
         </button>
+
+        <div className="bg-[#0F1016] rounded-3xl border border-gray-800 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-white font-semibold">Limit Orders</h3>
+            <span className="text-xs text-gray-500">Open Orders</span>
+          </div>
+          <div className="grid grid-cols-12 text-xs text-gray-500 uppercase tracking-wider">
+            <span className="col-span-3">Order Info</span>
+            <span className="col-span-3">Price</span>
+            <span className="col-span-2">Filled Size</span>
+            <span className="col-span-2">Expiry</span>
+            <span className="col-span-2">Actions</span>
+          </div>
+          <div className="space-y-3">
+            {mockLimitOrders.map((order) => (
+              <div key={order.id} className="grid grid-cols-12 items-center bg-[#0A0D16] rounded-2xl border border-gray-800 px-4 py-3 text-sm">
+                <div className="col-span-3 text-white">
+                  <div className="flex items-center space-x-2">
+                    <span>{order.amountFrom} {order.fromToken} →</span>
+                  </div>
+                  <div className="text-gray-400 text-xs">{order.amountTo} {order.toToken}</div>
+                </div>
+                <div className="col-span-3 text-gray-300">{order.price}</div>
+                <div className="col-span-2 text-gray-300">{order.filled}</div>
+                <div className="col-span-2 text-gray-300">{order.expiry}</div>
+                <div className="col-span-2 flex items-center space-x-2">
+                  <button className="px-3 py-1.5 rounded-full bg-[#1A2233] text-gray-300 text-xs">Claim</button>
+                  <button className="px-3 py-1.5 rounded-full border border-gray-700 text-gray-300 text-xs">Cancel</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </>
     );
   };
@@ -699,6 +755,37 @@ export const Swap = () => {
               <span className="text-gray-500">Platform fee</span>
               <span className="text-white">0%</span>
             </div>
+          </div>
+        </div>
+
+        <div className="bg-[#0F1016] rounded-3xl border border-gray-800 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-white font-semibold">DCA Orders</h3>
+            <span className="text-xs text-gray-500">Active DCAs</span>
+          </div>
+          <div className="grid grid-cols-12 text-xs text-gray-500 uppercase tracking-wider">
+            <span className="col-span-3">Orders</span>
+            <span className="col-span-3">Price Range</span>
+            <span className="col-span-2">Filled Size</span>
+            <span className="col-span-2">Next Order (UTC)</span>
+            <span className="col-span-2">Actions</span>
+          </div>
+          <div className="space-y-3">
+            {mockDcaOrders.map((order) => (
+              <div key={order.id} className="grid grid-cols-12 items-center bg-[#0A0D16] rounded-2xl border border-gray-800 px-4 py-3 text-sm">
+                <div className="col-span-3 text-white">
+                  <div className="flex items-center space-x-2">
+                    <span>{order.fromToken} → {order.toToken}</span>
+                  </div>
+                </div>
+                <div className="col-span-3 text-gray-300">{order.priceRange}</div>
+                <div className="col-span-2 text-gray-300">{order.filled}</div>
+                <div className="col-span-2 text-gray-300">{order.nextOrder}</div>
+                <div className="col-span-2 flex items-center space-x-2">
+                  <button className="px-3 py-1.5 rounded-full bg-[#1A2233] text-gray-300 text-xs">Claim</button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </>
