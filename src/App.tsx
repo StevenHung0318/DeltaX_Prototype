@@ -4,10 +4,11 @@ import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Markets } from './pages/Markets';
 import { Swap } from './pages/Swap';
+import { Clob } from './pages/Clob';
 import { LiquidityPools, LiquidityPool } from './pages/LiquidityPools';
 import { LiquidityPoolDetail } from './pages/LiquidityPoolDetail';
 
-type Page = 'dashboard' | 'markets' | 'swap' | 'liquidity';
+type Page = 'dashboard' | 'markets' | 'swap' | 'liquidity' | 'clob';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('markets');
@@ -47,6 +48,7 @@ function App() {
           />
         )}
         {currentPage === 'swap' && <Swap />}
+        {currentPage === 'clob' && <Clob />}
         {currentPage === 'liquidity' && (
           selectedLiquidityPool ? (
             <LiquidityPoolDetail pool={selectedLiquidityPool} onBack={() => setSelectedLiquidityPool(null)} />

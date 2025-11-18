@@ -231,6 +231,7 @@ const borrowWeightedApr = borrowTotalValue > 0
   : 0;
 const totalCollateralValue = borrowRows.reduce((sum, row) => sum + (row.collateralValueUSD ?? 0), 0);
 const netBorrowValue = totalCollateralValue - borrowTotalValue;
+const collateralCoverage = borrowTotalValue > 0 ? totalCollateralValue / borrowTotalValue : null;
 
 const activeMarket = useMemo<Market | null>(() => {
   if (!modalState?.marketId) return null;
@@ -250,11 +251,11 @@ const activeVault = useMemo<Vault | null>(() => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Position Overview</h1>
+        <h1 className="text-3xl font-bold text-white">Position Overview</h1>
       </div>
 
       <div className="space-y-6">
-        <section className="bg-[#161921] border border-gray-800 rounded-xl">
+        <section className="bg-[#0F1016] border border-gray-800 rounded-3xl overflow-hidden">
             <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
               <div>
                 <div className="flex items-center gap-2 text-white font-semibold">
@@ -265,11 +266,11 @@ const activeVault = useMemo<Vault | null>(() => {
               </div>
             </header>
             <div className="px-6 pt-4 pb-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+              <div className="bg-[#080d1b] border border-gray-800 rounded-2xl p-4">
                 <div className="text-xs uppercase tracking-wide text-gray-500">Total Supplied</div>
                 <div className="mt-2 text-xl font-bold text-white font-mono">{formatUSD(supplyTotalValue)}</div>
               </div>
-              <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+              <div className="bg-[#080d1b] border border-gray-800 rounded-2xl p-4">
                 <div className="text-xs uppercase tracking-wide text-gray-500">Average Supply APY</div>
                 <div className="mt-2 text-xl font-bold text-white font-mono">
                   {supplyTotalValue > 0 ? formatPercent(supplyWeightedApy) : '--'}
@@ -335,7 +336,7 @@ const activeVault = useMemo<Vault | null>(() => {
 
             <div className="md:hidden space-y-4 p-4">
               {supplyRows.map((row) => (
-                <div key={row.id} className="rounded-xl border border-gray-800 bg-[#10131C] p-4 space-y-4">
+                <div key={row.id} className="rounded-2xl border border-gray-800 bg-[#080d1b] p-4 space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="text-white font-semibold">{row.marketName}</div>
@@ -382,7 +383,7 @@ const activeVault = useMemo<Vault | null>(() => {
             </div>
           </section>
 
-        <section className="bg-[#161921] border border-gray-800 rounded-xl">
+        <section className="bg-[#0F1016] border border-gray-800 rounded-3xl overflow-hidden">
           <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
             <div>
               <div className="flex items-center gap-2 text-white font-semibold">
@@ -400,21 +401,21 @@ const activeVault = useMemo<Vault | null>(() => {
             </button>
           </header>
           <div className="px-6 pt-4 pb-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+            <div className="bg-[#080d1b] border border-gray-800 rounded-2xl p-4">
               <div className="text-xs uppercase tracking-wide text-gray-500">Total Collateral Value</div>
               <div className="mt-2 text-xl font-bold text-white font-mono">{formatUSD(totalCollateralValue)}</div>
             </div>
-            <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+            <div className="bg-[#080d1b] border border-gray-800 rounded-2xl p-4">
               <div className="text-xs uppercase tracking-wide text-gray-500">Total Borrowed</div>
               <div className="mt-2 text-xl font-bold text-white font-mono">{formatUSD(borrowTotalValue)}</div>
             </div>
-            <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+            <div className="bg-[#080d1b] border border-gray-800 rounded-2xl p-4">
               <div className="text-xs uppercase tracking-wide text-gray-500">Average Borrow Rate</div>
               <div className="mt-2 text-xl font-bold text-white font-mono">
                 {borrowTotalValue > 0 ? formatPercent(borrowWeightedApr) : '--'}
               </div>
             </div>
-            <div className="bg-[#0A0B0F] border border-gray-800 rounded-xl p-4">
+            <div className="bg-[#080d1b] border border-gray-800 rounded-2xl p-4">
               <div className="text-xs uppercase tracking-wide text-gray-500">Total Net Value</div>
               <div className="mt-2 text-xl font-bold text-white font-mono">{formatUSD(netBorrowValue)}</div>
             </div>
@@ -494,7 +495,7 @@ const activeVault = useMemo<Vault | null>(() => {
                 else if (row.healthVariant === 'risk') healthColor = 'text-[#FF5252]';
 
                 return (
-                  <div key={row.id} className="rounded-xl border border-gray-800 bg-[#10131C] p-4 space-y-4">
+                  <div key={row.id} className="rounded-2xl border border-gray-800 bg-[#080d1b] p-4 space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-white font-semibold">{row.marketName}</div>

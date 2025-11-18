@@ -1,15 +1,26 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, TrendingUp, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, TrendingUp, AlertTriangle, Search, Filter } from 'lucide-react';
 import { useProtocol } from '../context/ProtocolContext';
 import type { Market } from '../lib/supabase';
 import { formatUSD, formatPercent, calculateHealthFactor, calculateLiquidationPrice, calculateProjectedEarnings } from '../utils/format';
 
-const MarketLogo: React.FC<{ ticker: string; name?: string; logo?: string; size?: 'sm' | 'md' }> = ({ ticker, name, logo, size = 'md' }) => {
+const CRYPTO_TICKERS = new Set(['ETH', 'SUI', 'BTC']);
+const TOKEN_LOGOS: Record<string, string> = {
+  USDC: 'https://s2.coinmarketcap.com/static/img/coins/64x64/3408.png'
+};
+
+const MarketLogo: React.FC<{ ticker: string; name?: string; logo?: string; size?: 'sm' | 'md' }> = ({
+  ticker,
+  name,
+  logo,
+  size = 'md'
+}) => {
   const [failed, setFailed] = useState(false);
   const dimension = size === 'sm' ? 'h-8 w-8' : 'h-12 w-12';
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
+  const resolvedLogo = failed ? undefined : logo || TOKEN_LOGOS[ticker.toUpperCase()];
 
-  if (!logo || failed) {
+  if (!resolvedLogo) {
     return (
       <div className={`${dimension} rounded-full bg-[#1F2330] flex items-center justify-center`}>
         <span className={`font-semibold uppercase text-white ${textSize}`}>{ticker.slice(0, 2)}</span>
@@ -20,7 +31,7 @@ const MarketLogo: React.FC<{ ticker: string; name?: string; logo?: string; size?
   return (
     <div className={`${dimension} rounded-full bg-[#1F2330] flex items-center justify-center overflow-hidden`}>
       <img
-        src={logo}
+        src={resolvedLogo}
         alt={name ? `${name} logo` : `${ticker} logo`}
         className="h-full w-full object-contain"
         onError={() => setFailed(true)}
@@ -411,20 +422,41 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
     );
   };
 
-  const defaultViewMode = markets.length <= 4 ? 'card' : 'table';
-  const [marketListViewMode, setMarketListViewMode] = useState<'table' | 'card'>(defaultViewMode);
-  const hasUserSelectedViewMode = useRef(false);
+  const [marketSearch, setMarketSearch] = useState('');
+  const [marketCategory, setMarketCategory] = useState<'all' | 'crypto' | 'stocks'>('all');
 
-  useEffect(() => {
-    if (!hasUserSelectedViewMode.current) {
-      setMarketListViewMode(markets.length <= 4 ? 'card' : 'table');
-    }
-  }, [markets.length]);
+  const normalizedSearch = marketSearch.trim().toLowerCase();
+  const filteredMarkets = markets.filter((market) => {
+    const matchesCategory =
+      marketCategory === 'all'
+        ? true
+        : marketCategory === 'crypto'
+        ? CRYPTO_TICKERS.has(market.collateral_asset.toUpperCase())
+        : !CRYPTO_TICKERS.has(market.collateral_asset.toUpperCase());
 
-  const handleViewModeToggle = (mode: 'table' | 'card') => {
-    setMarketListViewMode(mode);
-    hasUserSelectedViewMode.current = true;
-  };
+    if (!matchesCategory) return false;
+
+    if (!normalizedSearch) return true;
+    const symbolMatch = market.collateral_asset.toLowerCase().includes(normalizedSearch);
+    const nameMatch = market.display_name?.toLowerCase().includes(normalizedSearch) ?? false;
+    const loanMatch = market.loan_asset.toLowerCase().includes(normalizedSearch);
+    return symbolMatch || nameMatch || loanMatch;
+  });
+
+  const totalMarketSize = markets.reduce((acc, market) => acc + (market.total_size || 0), 0);
+  const totalBorrowed = markets.reduce((acc, market) => acc + (market.total_borrowed || 0), 0);
+  const totalAvailableLiquidity = Math.max(totalMarketSize - totalBorrowed, 0);
+  const avgSupplyApr = markets.length
+    ? markets.reduce((acc, market) => acc + getSupplyApyForMarket(market), 0) / markets.length
+    : 0;
+  const avgBorrowApr = markets.length
+    ? markets.reduce((acc, market) => acc + (market.borrow_apy || 0), 0) / markets.length
+    : 0;
+
+  const barReference = filteredMarkets.length ? filteredMarkets : markets;
+  const chartMaxVolume = barReference.length
+    ? Math.max(...barReference.map((market) => market.total_size || 0)) || 1
+    : 1;
 
   const handleVaultWithdraw = async () => {
     if (!primaryVault || !userVaultPosition || !vaultWithdrawAmount) return;
@@ -1231,55 +1263,100 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
   return (
     <div className="space-y-8">
       {transactionToast}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Markets</h1>
-          <p className="text-gray-400">{marketPageDescription}</p>
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 bg-gradient-to-br from-[#141a2f] to-[#06080f] rounded-3xl p-6 border border-white/5 shadow-lg">
+          <div className="text-sm text-gray-400">Total Value Supplied</div>
+          <div className="text-3xl font-semibold text-white mt-2">{formatUSD(totalMarketSize)}</div>
+          <div className="text-sm text-gray-400 mt-6">Total Borrowed</div>
+          <div className="text-2xl font-semibold text-white mt-1">{formatUSD(totalBorrowed)}</div>
         </div>
-        {markets.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 self-start">
-            <span className="text-xs uppercase tracking-wide text-gray-500">View</span>
-            <button
-              onClick={() => handleViewModeToggle('card')}
-              className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
-                marketListViewMode === 'card'
-                  ? 'border-[#2A3042] bg-[#161921] text-white'
-                  : 'border-transparent text-gray-400 hover:text-white'
-              }`}
-            >
-              Cards
-            </button>
-            <button
-              onClick={() => handleViewModeToggle('table')}
-              className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
-                marketListViewMode === 'table'
-                  ? 'border-[#2A3042] bg-[#161921] text-white'
-                  : 'border-transparent text-gray-400 hover:text-white'
-              }`}
-            >
-              Table
-            </button>
+        <div className="flex-1 rounded-3xl border border-gray-800 bg-[#0D111C] p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-sm text-gray-400">Available Liquidity</div>
+              <div className="text-2xl font-semibold text-white mt-1">{formatUSD(totalAvailableLiquidity)}</div>
+            </div>
+            <div className="text-right text-xs text-gray-400">
+              <div>Avg Supply APR {formatPercent(avgSupplyApr)}</div>
+              <div>Avg Borrow APR {formatPercent(avgBorrowApr)}</div>
+            </div>
           </div>
-        )}
+          <div className="flex items-end h-32 space-x-2">
+            {(barReference.length ? barReference : markets).slice(0, 16).map((market) => (
+              <div
+                key={market.id}
+                className="flex-1 bg-[#1C63FF]/60 rounded-full"
+                style={{ height: `${Math.max((market.total_size || 0) / chartMaxVolume * 100, 6)}%` }}
+                title={`${market.collateral_asset} size ${formatUSD(market.total_size)}`}
+              />
+            ))}
+          </div>
+          <div className="text-xs text-gray-500 mt-2 sr-only">Market size distribution</div>
+        </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold text-white">Lending Markets</h1>
+          <p className="text-sm text-gray-400 sr-only">{marketPageDescription}</p>
+          <div className="flex items-center gap-2 text-xs">
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'crypto', label: 'Crypto' },
+              { key: 'stocks', label: 'US Stock' }
+            ].map((option) => (
+              <button
+                key={option.key}
+                onClick={() => setMarketCategory(option.key as 'all' | 'crypto' | 'stocks')}
+                className={`px-3 py-1.5 rounded-full border ${
+                  marketCategory === option.key
+                    ? 'border-[#0052FF] text-white'
+                    : 'border-gray-800 text-gray-400 hover:text-white'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center space-x-3 w-full lg:w-auto">
+          <div className="flex items-center space-x-2 bg-[#0F1424] border border-gray-800 rounded-2xl px-3 py-2 w-full lg:w-80">
+            <Search size={16} className="text-gray-500" />
+            <input
+              type="text"
+              placeholder="Filter by asset"
+              value={marketSearch}
+              onChange={(event) => setMarketSearch(event.target.value)}
+              className="bg-transparent text-sm text-white focus:outline-none flex-1"
+            />
+          </div>
+          <button className="p-2 rounded-full border border-gray-800 text-gray-400 hover:text-white">
+            <Filter size={16} />
+          </button>
+        </div>
       </div>
 
       {markets.length === 0 ? (
-        <div className="bg-[#161921] rounded-xl border border-gray-800 p-6 text-center text-gray-400">
+        <div className="bg-[#0F1016] rounded-3xl border border-gray-800 p-6 text-center text-gray-400">
           No markets available.
         </div>
-      ) : marketListViewMode === 'table' ? (
-        <div className="bg-[#161921] rounded-xl border border-gray-800 overflow-hidden">
+      ) : filteredMarkets.length === 0 ? (
+        <div className="bg-[#0F1016] rounded-3xl border border-gray-800 p-6 text-center text-gray-400">
+          No markets match your search yet.
+        </div>
+      ) : (
+        <div className="bg-[#0F1016] rounded-3xl border border-gray-800 overflow-hidden">
           <div className="grid grid-cols-7 gap-4 px-6 py-4 border-b border-gray-800 text-sm font-medium text-gray-400">
             <div>Collateral</div>
-            <div className="pl-8">Loan</div>
+            <div>Loan</div>
             <div>Market Size</div>
             <div>Available Liquidity</div>
             <div>Supply APR</div>
             <div>Borrow APR</div>
-            <div className="text-right">Actions</div>
+            <div>Actions</div>
           </div>
 
-          {markets.map((market) => {
+          {filteredMarkets.map((market) => {
             const availableLiquidity = Math.max(market.total_size - market.total_borrowed, 0);
             const supplyApy = getSupplyApyForMarket(market);
             const utilization = market.total_size > 0 ? (market.total_borrowed / market.total_size) * 100 : 0;
@@ -1295,36 +1372,29 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
               >
                 <div className="flex items-center space-x-3 min-w-0">
                   <MarketLogo ticker={market.collateral_asset} name={market.display_name} logo={market.logo} size="sm" />
-                  <div className="min-w-0">
-                    <div className="font-semibold text-white">{market.collateral_asset}</div>
-                    {market.display_name && <div className="text-xs text-gray-500 truncate">{market.display_name}</div>}
-                    <div className="text-xs text-gray-500">Price: {formatUSD(market.collateral_price)}</div>
-                  </div>
+                  <div className="font-semibold text-white">{market.collateral_asset}</div>
+                  <div className="text-xs text-gray-500 sr-only">Price: {formatUSD(market.collateral_price)}</div>
                 </div>
-                <div className="pl-8">
+                <div className="flex items-center space-x-2">
+                  <MarketLogo ticker={market.loan_asset} logo={TOKEN_LOGOS[market.loan_asset.toUpperCase()] ?? undefined} size="sm" />
                   <div className="text-white font-mono">{market.loan_asset}</div>
-                  <div className="text-xs text-gray-500">Loan currency</div>
                 </div>
-                <div>
+                <div className="flex flex-col justify-center h-full">
                   <div className="text-white font-mono">{formatUSDCAmount(market.total_size)}</div>
-                  <div className="text-xs text-gray-500">Total supplied</div>
                 </div>
-                <div>
+                <div className="flex flex-col justify-center h-full">
                   <div className="text-white font-mono">{formatUSDCAmount(availableLiquidity)}</div>
-                  <div className="text-xs text-gray-500">{formatPercent(utilization)} utilized</div>
                 </div>
-                <div className="flex flex-col">
+                <div className="flex flex-col justify-center h-full">
                   <div className="text-[#00D395] font-semibold">{formatPercent(supplyApy)}</div>
-                  <div className="text-xs text-gray-500">Current yield</div>
                 </div>
-                <div className="flex flex-col">
+                <div className="flex flex-col justify-center h-full">
                   <div className="text-[#FFB237] font-semibold flex items-center space-x-2">
                     <span>{formatPercent(market.borrow_apy)}</span>
                     <TrendingUp size={16} />
                   </div>
-                  <div className="text-xs text-gray-500">Borrow rate</div>
                 </div>
-                <div className="flex items-center justify-end space-x-2">
+                <div className="flex items-center space-x-2">
                   <button
                     onClick={(event) => handleMarketAction(market.id, 'borrow', event)}
                     className="px-3 py-2 rounded-lg border border-[#2A3042] text-sm font-medium text-white hover:bg-[#1F2330] transition-colors"
@@ -1334,75 +1404,6 @@ export const Markets: React.FC<MarketsProps> = ({ selectedMarketId, onSelectMark
                   <button
                     onClick={(event) => handleMarketAction(market.id, 'supply', event)}
                     className="px-3 py-2 rounded-lg bg-[#0052FF] hover:bg-[#0046DD] text-sm font-medium text-white transition-colors"
-                  >
-                    Supply
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {markets.map((market) => {
-            const availableLiquidity = Math.max(market.total_size - market.total_borrowed, 0);
-            const supplyApy = getSupplyApyForMarket(market);
-            const utilization = market.total_size > 0 ? (market.total_borrowed / market.total_size) * 100 : 0;
-
-            return (
-              <div
-                key={market.id}
-                className="bg-[#161921] border border-gray-800 rounded-xl p-6 flex flex-col space-y-5"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <MarketLogo ticker={market.collateral_asset} name={market.display_name} logo={market.logo} size="sm" />
-                    <div>
-                      <div className="text-lg font-semibold text-white">{market.collateral_asset}</div>
-                      {market.display_name && <div className="text-xs text-gray-500">{market.display_name}</div>}
-                      <div className="text-xs text-gray-500 mt-1">Price: {formatUSD(market.collateral_price)}</div>
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-500 font-medium">LLTV {market.lltv}%</span>
-                </div>
-
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Loan Asset</span>
-                    <span className="text-white font-mono">{market.loan_asset}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Total Market Size</span>
-                    <span className="text-white font-mono">{formatUSDCAmount(market.total_size)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Available Liquidity</span>
-                    <span className="text-white font-mono">{formatUSDCAmount(availableLiquidity)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Supply APR</span>
-                    <span className="text-[#00D395] font-semibold">{formatPercent(supplyApy)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Borrow APR</span>
-                    <span className="text-[#FFB237] font-semibold">{formatPercent(market.borrow_apy)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Utilization</span>
-                    <span className="text-white font-mono">{formatPercent(utilization)}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 pt-2">
-                  <button
-                    onClick={(event) => handleMarketAction(market.id, 'borrow', event)}
-                    className="flex-1 px-4 py-2 rounded-lg border border-[#2A3042] text-sm font-medium text-white hover:bg-[#1F2330] transition-colors"
-                  >
-                    Borrow
-                  </button>
-                  <button
-                    onClick={(event) => handleMarketAction(market.id, 'supply', event)}
-                    className="flex-1 px-4 py-2 rounded-lg bg-[#0052FF] hover:bg-[#0046DD] text-sm font-medium text-white transition-colors"
                   >
                     Supply
                   </button>

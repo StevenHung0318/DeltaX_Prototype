@@ -3,6 +3,42 @@ import { supabase, Vault, Market, VaultPosition, MarketPosition } from '../lib/s
 
 const STOCK_MARKETS = [
   {
+    ticker: 'ETH',
+    name: 'Ethereum',
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png',
+    price: 3180.25,
+    totalSize: 320_000_000,
+    totalBorrowed: 180_500_000,
+    borrowApy: 3.9,
+    supplyApy: 2.4,
+    utilization: 56.4,
+    lltv: 75
+  },
+  {
+    ticker: 'SUI',
+    name: 'Sui',
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/20947.png',
+    price: 1.63,
+    totalSize: 90_000_000,
+    totalBorrowed: 44_200_000,
+    borrowApy: 6.2,
+    supplyApy: 4.2,
+    utilization: 49.1,
+    lltv: 60
+  },
+  {
+    ticker: 'BTC',
+    name: 'Bitcoin',
+    logo: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1.png',
+    price: 64750.12,
+    totalSize: 420_000_000,
+    totalBorrowed: 225_000_000,
+    borrowApy: 4.4,
+    supplyApy: 2.7,
+    utilization: 53.6,
+    lltv: 70
+  },
+  {
     ticker: 'SUIG',
     name: 'Sui Group Holdings Ltd',
     logo: 'https://universal.hellopublic.com/companyLogos/SUIG@2x.png',

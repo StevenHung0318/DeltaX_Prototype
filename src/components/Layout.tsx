@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { useProtocol } from '../context/ProtocolContext';
-import { formatAddress } from '../utils/format';
-import { Wallet, ChevronDown } from 'lucide-react';
+import React, { useState, useRef } from "react";
+import { useProtocol } from "../context/ProtocolContext";
+import { formatAddress } from "../utils/format";
+import { Wallet, ChevronDown } from "lucide-react";
+import SynexLogo from "../assets/Synex.png";
 
-type Page = 'dashboard' | 'markets' | 'swap' | 'liquidity';
+type Page = "dashboard" | "markets" | "swap" | "liquidity" | "clob";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,19 +12,55 @@ interface LayoutProps {
   onNavigate: (page: Page) => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }) => {
+export const Layout: React.FC<LayoutProps> = ({
+  children,
+  currentPage,
+  onNavigate,
+}) => {
   const { connectedAddress, connectWallet, disconnectWallet } = useProtocol();
   const [lendOpen, setLendOpen] = useState(false);
   const [dexOpen, setDexOpen] = useState(false);
+  const lendCloseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dexCloseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleNavigate = (page: Page) => {
     onNavigate(page);
-    if (page !== 'markets' && page !== 'dashboard') {
+    if (page !== "markets" && page !== "dashboard") {
       setLendOpen(false);
     }
-    if (page !== 'swap' && page !== 'liquidity') {
+    if (page !== "swap" && page !== "liquidity") {
       setDexOpen(false);
     }
+  };
+
+  const navButtonBase =
+    "flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border";
+  const activeNavStyles =
+    "bg-gradient-to-r from-[#1a2f6b] via-[#142653] to-[#0d1d3d] text-white border-[#2e4aa5] shadow-[0px_10px_30px_rgba(0,82,255,0.35)]";
+  const inactiveNavStyles =
+    "text-gray-300 border-transparent bg-[#0f1625]/80 hover:bg-[#151f34]/90 hover:text-white hover:border-[#24345b]/70";
+
+  const handleHoverOpen = (
+    setter: React.Dispatch<React.SetStateAction<boolean>>,
+    timeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>
+  ) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setter(true);
+  };
+
+  const handleHoverClose = (
+    setter: React.Dispatch<React.SetStateAction<boolean>>,
+    timeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>
+  ) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      setter(false);
+    }, 200);
   };
 
   return (
@@ -32,41 +69,51 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center justify-between sm:justify-start sm:space-x-8">
-              <div className="text-2xl font-bold text-white">Borpho</div>
+              <img
+                src={SynexLogo}
+                alt="Synex logo"
+                className="h-8 w-auto"
+              />
               <div className="flex items-center space-x-6">
-                <div className="relative">
+                <div
+                  className="relative"
+                  onMouseEnter={() => handleHoverOpen(setLendOpen, lendCloseTimeout)}
+                  onMouseLeave={() => handleHoverClose(setLendOpen, lendCloseTimeout)}
+                  onTouchStart={() => setLendOpen((prev) => !prev)}
+                >
                   <button
-                    onClick={() => setLendOpen((prev) => !prev)}
-                    className={`flex items-center space-x-2 px-3 py-2 text-sm font-medium transition-colors ${
-                      currentPage === 'markets' || currentPage === 'dashboard'
-                        ? 'text-[#0052FF]'
-                        : 'text-gray-400 hover:text-white'
+                    className={`${navButtonBase} ${
+                      currentPage === "markets" || currentPage === "dashboard"
+                        ? activeNavStyles
+                        : inactiveNavStyles
                     }`}
                   >
                     <span>Lend</span>
                     <ChevronDown
                       size={16}
-                      className={`transition-transform ${lendOpen ? 'rotate-180' : ''}`}
+                      className={`transition-transform duration-200 ${
+                        lendOpen ? "rotate-180" : ""
+                      }`}
                     />
                   </button>
                   {lendOpen && (
-                    <div className="absolute left-0 mt-2 w-40 rounded-lg border border-gray-800 bg-[#1C1F2A] shadow-lg z-20">
+                    <div className="absolute left-0 mt-3 w-48 rounded-2xl border border-[#1f2c4e]/80 bg-[#0d1323]/95 shadow-[0px_18px_45px_rgba(2,6,23,0.65)] backdrop-blur-xl z-20 p-2 space-y-1">
                       <button
-                        onClick={() => handleNavigate('markets')}
-                        className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                          currentPage === 'markets'
-                            ? 'text-[#0052FF]'
-                            : 'text-gray-300 hover:text-white'
+                        onClick={() => handleNavigate("markets")}
+                        className={`block w-full px-4 py-2.5 text-left text-sm rounded-xl transition-all duration-150 ${
+                          currentPage === "markets"
+                            ? "text-white bg-white/10"
+                            : "text-gray-300 hover:text-white hover:bg-white/5"
                         }`}
                       >
                         Markets
                       </button>
                       <button
-                        onClick={() => handleNavigate('dashboard')}
-                        className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                          currentPage === 'dashboard'
-                            ? 'text-[#0052FF]'
-                            : 'text-gray-300 hover:text-white'
+                        onClick={() => handleNavigate("dashboard")}
+                        className={`block w-full px-4 py-2.5 text-left text-sm rounded-xl transition-all duration-150 ${
+                          currentPage === "dashboard"
+                            ? "text-white bg-white/10"
+                            : "text-gray-300 hover:text-white hover:bg-white/5"
                         }`}
                       >
                         Dashboard
@@ -74,42 +121,60 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
                     </div>
                   )}
                 </div>
-                <div className="relative">
+                <div
+                  className="relative"
+                  onMouseEnter={() => handleHoverOpen(setDexOpen, dexCloseTimeout)}
+                  onMouseLeave={() => handleHoverClose(setDexOpen, dexCloseTimeout)}
+                  onTouchStart={() => setDexOpen((prev) => !prev)}
+                >
                   <button
-                    onClick={() => setDexOpen((prev) => !prev)}
-                    className={`flex items-center space-x-2 px-3 py-2 text-sm font-medium transition-colors ${
-                      currentPage === 'swap' || currentPage === 'liquidity'
-                        ? 'text-[#0052FF]'
-                        : 'text-gray-400 hover:text-white'
+                    className={`${navButtonBase} ${
+                      currentPage === "swap" ||
+                      currentPage === "liquidity" ||
+                      currentPage === "clob"
+                        ? activeNavStyles
+                        : inactiveNavStyles
                     }`}
                   >
                     <span>DEX</span>
                     <ChevronDown
                       size={16}
-                      className={`transition-transform ${dexOpen ? 'rotate-180' : ''}`}
+                      className={`transition-transform duration-200 ${
+                        dexOpen ? "rotate-180" : ""
+                      }`}
                     />
                   </button>
                   {dexOpen && (
-                    <div className="absolute left-0 mt-2 w-40 rounded-lg border border-gray-800 bg-[#1C1F2A] shadow-lg z-20">
+                    <div className="absolute left-0 mt-3 w-48 rounded-2xl border border-[#1f2c4e]/80 bg-[#0d1323]/95 shadow-[0px_18px_45px_rgba(2,6,23,0.65)] backdrop-blur-xl z-20 p-2 space-y-1">
                       <button
-                        onClick={() => handleNavigate('swap')}
-                        className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                          currentPage === 'swap'
-                            ? 'text-[#0052FF]'
-                            : 'text-gray-300 hover:text-white'
+                        onClick={() => handleNavigate("swap")}
+                        className={`block w-full px-4 py-2.5 text-left text-sm rounded-xl transition-all duration-150 ${
+                          currentPage === "swap"
+                            ? "text-white bg-white/10"
+                            : "text-gray-300 hover:text-white hover:bg-white/5"
                         }`}
                       >
                         Swap
                       </button>
                       <button
-                        onClick={() => handleNavigate('liquidity')}
-                        className={`block w-full px-4 py-2 text-left text-sm transition-colors ${
-                          currentPage === 'liquidity'
-                            ? 'text-[#0052FF]'
-                            : 'text-gray-300 hover:text-white'
+                        onClick={() => handleNavigate("liquidity")}
+                        className={`block w-full px-4 py-2.5 text-left text-sm rounded-xl transition-all duration-150 ${
+                          currentPage === "liquidity"
+                            ? "text-white bg-white/10"
+                            : "text-gray-300 hover:text-white hover:bg-white/5"
                         }`}
                       >
                         Liquidity Pools
+                      </button>
+                      <button
+                        onClick={() => handleNavigate("clob")}
+                        className={`block w-full px-4 py-2.5 text-left text-sm rounded-xl transition-all duration-150 ${
+                          currentPage === "clob"
+                            ? "text-white bg-white/10"
+                            : "text-gray-300 hover:text-white hover:bg-white/5"
+                        }`}
+                      >
+                        Order Book (CLOB)
                       </button>
                     </div>
                   )}
@@ -119,7 +184,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
                   className="flex items-center space-x-2 px-4 py-2 bg-[#0052FF] hover:bg-[#0046DD] text-white rounded-lg transition-colors sm:hidden"
                 >
                   <Wallet size={16} />
-                  <span>{connectedAddress ? formatAddress(connectedAddress) : 'Connect Wallet'}</span>
+                  <span>
+                    {connectedAddress
+                      ? formatAddress(connectedAddress)
+                      : "Connect Wallet"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -145,9 +214,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
           </div>
         </div>
       </nav>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {children}
-      </main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">{children}</main>
     </div>
   );
 };

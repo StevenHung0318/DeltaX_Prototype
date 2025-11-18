@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, Star, RefreshCw, Repeat, LineChart, Zap, Plus, Minus, Info, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Star, RefreshCw, Repeat, LineChart, Plus, Minus, Info, ChevronDown } from 'lucide-react';
 import { LiquidityPool } from './LiquidityPools';
 
 interface LiquidityPoolDetailProps {
@@ -7,16 +7,11 @@ interface LiquidityPoolDetailProps {
   onBack: () => void;
 }
 
-type RangeMode = 'stable' | 'full' | 'custom';
-
 export const LiquidityPoolDetail: React.FC<LiquidityPoolDetailProps> = ({ pool, onBack }) => {
-  const [activeTab, setActiveTab] = useState<'provide' | 'positions' | 'analytics'>('provide');
-  const [rangeMode, setRangeMode] = useState<RangeMode>('stable');
   const [minPrice, setMinPrice] = useState((pool.currentPrice * 0.999).toFixed(4));
   const [maxPrice, setMaxPrice] = useState((pool.currentPrice * 1.001).toFixed(4));
   const [baseAmount, setBaseAmount] = useState('');
   const [quoteAmount, setQuoteAmount] = useState('');
-  const [zapEnabled, setZapEnabled] = useState(false);
 
   const parseAmount = (value: string) => {
     const amount = Number(value);
@@ -67,10 +62,10 @@ export const LiquidityPoolDetail: React.FC<LiquidityPoolDetailProps> = ({ pool, 
           {pool.quoteSymbol} per {pool.baseSymbol}
         </span>
       </div>
-      <div className="flex items-center justify-between rounded-2xl border border-gray-800 bg-[#070b15] px-4 py-3">
+      <div className="flex items-center justify-between rounded-2xl border border-gray-800 bg-[#070b15] px-3 py-2">
         <button
           onClick={onDecrement}
-          className="w-12 h-12 rounded-full border border-gray-700 text-white text-2xl flex items-center justify-center"
+          className="w-10 h-10 rounded-full border border-gray-700 text-white text-xl flex items-center justify-center"
         >
           –
         </button>
@@ -78,11 +73,11 @@ export const LiquidityPoolDetail: React.FC<LiquidityPoolDetailProps> = ({ pool, 
           type="number"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="bg-transparent text-4xl font-semibold text-white focus:outline-none text-center w-28"
+          className="bg-transparent text-2xl font-semibold text-white focus:outline-none text-center w-24"
         />
         <button
           onClick={onIncrement}
-          className="w-12 h-12 rounded-full border border-gray-700 text-white text-2xl flex items-center justify-center"
+          className="w-10 h-10 rounded-full border border-gray-700 text-white text-xl flex items-center justify-center"
         >
           +
         </button>
@@ -193,93 +188,56 @@ export const LiquidityPoolDetail: React.FC<LiquidityPoolDetailProps> = ({ pool, 
         ))}
       </div>
 
-      <div className="flex items-center space-x-6 border-b border-gray-900">
-        {(['provide', 'positions', 'analytics'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-2 text-sm ${
-              activeTab === tab ? 'text-white border-b-2 border-[#0052FF]' : 'text-gray-500'
-            }`}
-          >
-            {tab === 'provide' ? 'Provide Liquidity' : tab === 'positions' ? 'My Positions' : 'Analytics'}
-          </button>
-        ))}
-      </div>
-
-      {activeTab !== 'provide' ? (
-        <div className="rounded-2xl border border-dashed border-gray-800 p-10 text-center text-gray-500">
-          {activeTab === 'positions'
-            ? 'Positions tracking coming soon.'
-            : 'Analytics dashboard coming soon.'}
-        </div>
-      ) : (
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="rounded-3xl border border-gray-800 bg-[#05080f] p-6 space-y-6">
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div className="rounded-3xl border border-gray-800 bg-[#05080f] p-6 space-y-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400">Select Range</p>
                   <p className="text-2xl font-semibold text-white mt-2">{pool.baseSymbol} / {pool.quoteSymbol}</p>
                 </div>
-                <div className="flex items-center space-x-2 text-gray-400">
-                  <button className="px-3 py-1.5 rounded-full border border-gray-700 text-xs flex items-center space-x-1">
-                    <span>{pool.baseSymbol}</span>
-                  </button>
-                  <button className="px-3 py-1.5 rounded-full border border-gray-700 text-xs flex items-center space-x-1">
-                    <span>{pool.quoteSymbol}</span>
-                  </button>
-                  <button className="p-2 rounded-full border border-gray-700 hover:text-white">
-                    <LineChart size={16} />
-                  </button>
-                </div>
               </div>
 
-              <div className="flex space-x-4">
-                <div className="flex flex-col space-y-2">
-                  {([
-                    { key: 'stable', label: 'Stable', desc: 'Tight range' },
-                    { key: 'full', label: 'Full Range', desc: 'Min to max' },
-                    { key: 'custom', label: 'Custom', desc: 'Manual inputs' }
-                  ] as { key: RangeMode; label: string; desc: string }[]).map((option) => (
-                    <button
-                      key={option.key}
-                      onClick={() => setRangeMode(option.key)}
-                      className={`w-32 text-left px-4 py-3 rounded-2xl border ${
-                        rangeMode === option.key ? 'border-[#00C2FF] text-white bg-[#0F1E33]' : 'border-gray-800 text-gray-400'
-                      }`}
-                    >
-                      <p className="text-sm font-semibold">{option.label}</p>
-                      <p className="text-xs text-gray-500">{option.desc}</p>
-                    </button>
-                  ))}
+              <div className="bg-[#080d1b] rounded-2xl border border-gray-900 p-4 space-y-4">
+                <div className="flex items-center justify-between text-xs text-gray-400">
+                  <span>Current Pool Price</span>
+                  <span>{pool.currentPrice.toFixed(4)} {pool.quoteSymbol}/{pool.baseSymbol}</span>
                 </div>
-
-                <div className="flex-1 bg-[#080d1b] rounded-2xl border border-gray-900 p-4 space-y-4">
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>Current Pool Price</span>
-                    <span>{pool.currentPrice.toFixed(4)} {pool.quoteSymbol}/{pool.baseSymbol}</span>
+                <div className="relative h-48 bg-gradient-to-b from-[#0b1424] to-[#02050b] rounded-2xl overflow-hidden">
+                  <div className="absolute inset-6 flex items-end space-x-1">
+                    {[80, 120, 150, 140, 110, 90, 70, 60, 55, 50, 48, 40].map((height, index) => (
+                      <div
+                        key={`hist-${index}`}
+                        className="flex-1 rounded-full bg-[#1E4FC2]/70"
+                        style={{ height: `${height * 0.5}%` }}
+                      />
+                    ))}
                   </div>
-                  <div className="relative h-44 bg-gradient-to-br from-[#0D1B2E] via-[#112240] to-[#05070c] rounded-2xl overflow-hidden">
-                    <div className="absolute inset-4 grid grid-cols-12 gap-2">
-                      {[...Array(12)].map((_, index) => (
-                        <div
-                          key={index}
-                          className="bg-[#1C63FF]/40 rounded-full"
-                          style={{ height: `${40 + (index % 4) * 12}%` }}
-                        />
-                      ))}
+                  <div className="absolute inset-y-6 left-[18%] w-1 bg-[#32E2C1] rounded-full">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 px-2 py-0.5 rounded-full bg-[#24bba2] text-[10px] text-white">
+                      ||
                     </div>
-                    <div className="absolute inset-y-6 left-1/4 w-1 bg-[#2AF0FF] rounded-full" />
-                    <div className="absolute inset-y-4 left-1/2 w-1 bg-white rounded-full" />
-                    <div className="absolute inset-y-8 left-3/4 w-1 bg-[#2AF0FF] rounded-full" />
-                    <span className="absolute text-xs text-white -top-3 left-1/4">-0.07%</span>
-                    <span className="absolute text-xs text-white -top-3 left-3/4">0.06%</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>3D Price Range</span>
-                    <span>0.9855 – 1.0008 {pool.quoteSymbol}/{pool.baseSymbol}</span>
+                  <div className="absolute inset-y-6 left-[78%] w-1 bg-[#5FA0FF] rounded-full">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 px-2 py-0.5 rounded-full bg-[#4d7ddf] text-[10px] text-white">
+                      ||
+                    </div>
                   </div>
+                  <div className="absolute inset-y-6 left-[48%] w-1 bg-white rounded-full">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 w-2 h-2 rounded-full bg-white" />
+                  </div>
+                  <div className="absolute inset-y-8 left-[32%] w-px bg-white/30 border-dashed" />
+                  <div className="absolute inset-y-8 left-[64%] w-px bg-white/30 border-dashed" />
+                  <div className="absolute bottom-4 left-0 right-0 flex justify-between text-xs text-gray-500 px-6">
+                    <span>50,000</span>
+                    <span>100,000</span>
+                    <span>150,000</span>
+                    <span>200,000</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>3D Price Range</span>
+                  <span>0.9855 – 1.0008 {pool.quoteSymbol}/{pool.baseSymbol}</span>
                 </div>
               </div>
 
@@ -300,30 +258,6 @@ export const LiquidityPoolDetail: React.FC<LiquidityPoolDetailProps> = ({ pool, 
                 />
               </div>
 
-              <div className="flex items-center justify-between text-sm text-gray-400">
-                <div>
-                  <span className="text-xs text-gray-500">Leverage</span>
-                  <p className="text-white font-semibold text-lg mt-1">3,077.58x</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs text-gray-500">Estimated APR</span>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <p className="text-white font-semibold text-lg">{(pool.apr * 1.44).toFixed(2)}%</p>
-                    <div className="flex space-x-1 text-xs">
-                      {['24H', '7D', '30D'].map((label) => (
-                        <button
-                          key={label}
-                          className={`px-3 py-1 rounded-full border ${
-                            label === '30D' ? 'border-[#0052FF] text-white' : 'border-gray-800 text-gray-400'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -332,21 +266,11 @@ export const LiquidityPoolDetail: React.FC<LiquidityPoolDetailProps> = ({ pool, 
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-white">Deposit Amounts</h2>
-                  <p className="text-xs text-gray-500 mt-1">Provide balanced liquidity to the pool</p>
                 </div>
                 <div className="flex items-center space-x-3">
                   <button className="px-3 py-1.5 rounded-full border border-gray-700 text-gray-400 text-xs flex items-center space-x-1">
                     <span>0.5%</span>
                     <Info size={14} />
-                  </button>
-                  <button
-                    onClick={() => setZapEnabled((prev) => !prev)}
-                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border ${
-                      zapEnabled ? 'border-[#00C2FF] text-white' : 'border-gray-700 text-gray-400'
-                    }`}
-                  >
-                    <Zap size={16} />
-                    <span>Zap In</span>
                   </button>
                 </div>
               </div>
@@ -364,21 +288,6 @@ export const LiquidityPoolDetail: React.FC<LiquidityPoolDetailProps> = ({ pool, 
                 onChange={setQuoteAmount}
                 balance={pool.userQuoteBalance}
               />
-              <div className="flex items-center justify-center">
-                <div className="w-10 h-10 rounded-full bg-[#101421] border border-gray-700 text-gray-400 flex items-center justify-center">
-                  +
-                </div>
-              </div>
-              <DepositInput
-                label="Token B"
-                token={pool.quoteSymbol}
-                value={quoteAmount}
-                onChange={setQuoteAmount}
-                balance={pool.userQuoteBalance}
-              />
-              <button className="w-full py-3 rounded-2xl bg-[#111628] text-gray-400 text-sm">
-                Enter an amount
-              </button>
               <div className="text-sm text-gray-400">
                 <div className="flex items-center justify-between">
                   <span>Total Amount</span>
@@ -409,7 +318,6 @@ export const LiquidityPoolDetail: React.FC<LiquidityPoolDetailProps> = ({ pool, 
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 };

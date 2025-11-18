@@ -213,16 +213,19 @@ export const Swap = () => {
       selectorKey?: string;
       rightControl?: ReactNode;
       enableSupplySelection?: boolean;
+      compact?: boolean;
     }
   ) => (
     <div
-      className={`bg-[#0F1016] rounded-2xl p-6 border ${
+      className={`bg-[#0F1016] rounded-2xl ${options?.compact ? 'p-4' : 'p-6'} border ${
         options?.highlight ? 'border-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.35)]' : 'border-gray-800'
       }`}
     >
-      <div className="flex items-start justify-between mb-4">
+      <div className={`flex items-start justify-between ${options?.compact ? 'mb-3' : 'mb-4'}`}>
         <div>
-          <p className="text-xs uppercase tracking-widest text-gray-500">{label}</p>
+          <p className={`uppercase tracking-widest text-gray-500 ${options?.compact ? 'text-[0.65rem]' : 'text-xs'}`}>
+            {label}
+          </p>
           <p className="text-sm text-gray-400">
             ${(parseAmount(amount) * token.priceUsd).toFixed(2)}
           </p>
@@ -270,7 +273,7 @@ export const Swap = () => {
           value={amount}
           onChange={(e) => !options?.readOnly && setAmount(e.target.value)}
           readOnly={options?.readOnly}
-          className={`bg-transparent text-4xl font-semibold text-white focus:outline-none w-full ${
+          className={`bg-transparent ${options?.compact ? 'text-3xl' : 'text-4xl'} font-semibold text-white focus:outline-none w-full ${
             options?.readOnly ? 'cursor-default' : ''
           } ${options?.readOnly && !amount ? 'placeholder:text-gray-500' : ''}`}
           placeholder={options?.readOnly && !amount ? token.symbol : undefined}
@@ -383,153 +386,201 @@ export const Swap = () => {
   };
 
   const renderSwapControls = () => (
-    <>
-      <div className="space-y-4">
+    <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+      <div className="space-y-3">
         {renderTokenSelector('You Pay', payToken, handlePayTokenChange, payAmount, setPayAmount, {
           showBalanceActions: true,
           balance: payBalance,
           onFaucet: () => handleFaucet(payToken.symbol),
-          selectorKey: 'swap-pay'
+          selectorKey: 'swap-pay',
+          compact: true
         })}
 
         <div className="flex justify-center">
           <button
             onClick={swapTokens}
-            className="w-12 h-12 rounded-full bg-[#0F1016] border border-gray-800 flex items-center justify-center text-gray-300 hover:text-white"
+            className="w-10 h-10 rounded-full bg-[#0F1016] border border-gray-800 flex items-center justify-center text-gray-300 hover:text-white"
           >
-            <ArrowDownIcon />
+            <ArrowDownIcon size={18} />
           </button>
         </div>
 
         {renderTokenSelector('You Receive', receiveToken, handleReceiveTokenChange, receiveAmount, setReceiveAmount, {
           balance: receiveBalance,
           readOnly: true,
-          selectorKey: 'swap-receive'
+          selectorKey: 'swap-receive',
+          compact: true
         })}
       </div>
 
-      <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-4 space-y-4">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center space-x-2 text-gray-400">
-            <span>1 {payToken.symbol} ≈ {price}</span>
-            <Info size={14} />
+      <div className="flex flex-col gap-4">
+        <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-4 space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center space-x-2 text-gray-400">
+              <span>1 {payToken.symbol} ≈ {price}</span>
+              <Info size={14} />
+            </div>
+            <div className="text-green-400 text-xs">Within 0.01%</div>
           </div>
-          <div className="text-green-400 text-xs">Within 0.01%</div>
+
+          <div className="space-y-2 text-sm text-gray-400">
+            <div className="flex justify-between">
+              <span>Price Difference</span>
+              <span>0.00%</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Minimum Received</span>
+              <span>
+                {(parseAmount(receiveAmount) * (1 - parseFloat(slippage) / 100)).toFixed(8)}{' '}
+                {receiveToken.symbol}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Route</span>
+              <span className="flex items-center space-x-1 text-white">
+                <Wallet size={14} />
+                <span>0xRoute</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-white/5">
+            <button
+              className="w-full py-3 rounded-2xl bg-[#0052FF] text-white font-semibold text-base hover:bg-[#0046DD] transition-colors disabled:bg-gray-700"
+              disabled={insufficientBalance}
+              onClick={handleSwapExecute}
+            >
+              {insufficientBalance ? `Add ${payToken.symbol} to Swap` : 'Confirm Swap'}
+            </button>
+          </div>
         </div>
 
-        <div className="flex justify-between text-sm text-gray-400">
-          <span>Price Difference</span>
-          <span>0.00%</span>
-        </div>
-        <div className="flex justify-between text-sm text-gray-400">
-          <span>Minimum Received</span>
-          <span>
-            {(parseAmount(receiveAmount) * (1 - parseFloat(slippage) / 100)).toFixed(8)} {receiveToken.symbol}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm text-gray-400">
-          <span>Auto Router</span>
-          <span className="flex items-center space-x-1 text-white">
-            <Wallet size={14} />
-            <span>0xRoute</span>
-          </span>
+        <div className="rounded-2xl border border-gray-800 bg-[#0F1016] p-4 text-sm text-gray-400 space-y-2">
+          <div className="flex items-center justify-between">
+            <span>Slippage</span>
+            <span>{slippage}%</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Estimated Fee</span>
+            <span>$0.32</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Aggregator Mode</span>
+            <span className="text-white">{aggregatorMode ? 'On' : 'Off'}</span>
+          </div>
         </div>
       </div>
-
-      <button
-        className="w-full py-4 rounded-2xl bg-[#0052FF] text-white font-semibold text-lg hover:bg-[#0046DD] transition-colors disabled:bg-gray-700"
-        disabled={insufficientBalance}
-        onClick={handleSwapExecute}
-      >
-        {insufficientBalance ? `Add ${payToken.symbol} to Swap` : 'Confirm Swap'}
-      </button>
-    </>
+    </div>
   );
 
   const renderLimitControls = () => {
     const parsedAmount = parseAmount(payAmount);
     const buttonDisabled = parsedAmount <= 0 || insufficientBalance;
+    const limitPriceLabel = `${limitRate || '0'} ${
+      limitRateInPayToken ? payToken.symbol : receiveToken.symbol
+    } per ${limitRateInPayToken ? receiveToken.symbol : payToken.symbol}`;
 
     return (
       <>
-        <div className="space-y-4">
-          {renderTokenSelector('You Pay', payToken, handlePayTokenChange, payAmount, setPayAmount, {
-            showBalanceActions: true,
-            balance: payBalance,
-            onFaucet: () => handleFaucet(payToken.symbol),
-            highlight: true,
-            selectorKey: 'limit-pay',
-            enableSupplySelection: true
-          })}
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          <div className="space-y-3">
+            {renderTokenSelector('You Pay', payToken, handlePayTokenChange, payAmount, setPayAmount, {
+              showBalanceActions: true,
+              balance: payBalance,
+              onFaucet: () => handleFaucet(payToken.symbol),
+              highlight: true,
+              selectorKey: 'limit-pay',
+              enableSupplySelection: true,
+              compact: true
+            })}
 
-          <div className="flex justify-center">
-            <div className="w-12 h-12 rounded-full bg-[#0F1016] border border-[#0052FF] flex items-center justify-center text-gray-300">
-              <ArrowDownIcon />
+            <div className="flex justify-center">
+              <div className="w-10 h-10 rounded-full bg-[#0F1016] border border-[#0052FF] flex items-center justify-center text-gray-300">
+                <ArrowDownIcon size={18} />
+              </div>
+            </div>
+
+            {renderTokenSelector('You Receive', receiveToken, handleReceiveTokenChange, receiveAmount, setReceiveAmount, {
+              balance: receiveBalance,
+              readOnly: true,
+              highlight: true,
+              selectorKey: 'limit-receive',
+              compact: true
+            })}
+
+            <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-4 text-sm text-gray-400 space-y-2">
+              <div className="flex justify-between">
+                <span>Limit Price</span>
+                <span className="text-white">{limitPriceLabel}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Est. Receive</span>
+                <span className="text-white">
+                  {receiveAmount} {receiveToken.symbol}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Supply Destination</span>
+                <span className="text-white text-right">{selectedSupplyOption.label}</span>
+              </div>
             </div>
           </div>
 
-          {renderTokenSelector('You Receive', receiveToken, handleReceiveTokenChange, receiveAmount, setReceiveAmount, {
-            balance: receiveBalance,
-            readOnly: true,
-            highlight: true,
-            selectorKey: 'limit-receive'
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-5">
-            <div className="flex items-center justify-between text-xs text-gray-400">
-              <span>Buy {receiveToken.symbol} at rate</span>
-              <button
-                onClick={handleMarketRateClick}
-                className="px-3 py-1 rounded-full border border-gray-700 text-gray-300 text-xs"
-              >
-                Market
-              </button>
-            </div>
-            <div className="flex items-center justify-between mt-4">
-              <input
-                type="number"
-                value={limitRate}
-                onChange={(e) => setLimitRate(e.target.value)}
-                className="bg-transparent text-3xl font-semibold text-white focus:outline-none w-full"
-              />
-              <button
-                onClick={handleToggleRateDirection}
-                className="flex items-center space-x-2 text-gray-400 text-sm pl-4 hover:text-white transition-colors"
-              >
-                <span>{limitRateInPayToken ? payToken.symbol : receiveToken.symbol}</span>
-                <Repeat
-                  size={16}
-                  className={`transition-transform ${limitRateInPayToken ? '' : 'rotate-180'}`}
+          <div className="space-y-4">
+            <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-4">
+              <div className="flex items-center justify-between text-xs text-gray-400">
+                <span>Buy {receiveToken.symbol} at</span>
+                <button
+                  onClick={handleMarketRateClick}
+                  className="px-3 py-1 rounded-full border border-gray-700 text-gray-300 text-xs"
+                >
+                  Market
+                </button>
+              </div>
+              <div className="flex items-center justify-between mt-4">
+                <input
+                  type="number"
+                  value={limitRate}
+                  onChange={(e) => setLimitRate(e.target.value)}
+                  className="bg-transparent text-2xl font-semibold text-white focus:outline-none w-full"
                 />
+                <button
+                  onClick={handleToggleRateDirection}
+                  className="flex items-center space-x-2 text-gray-400 text-sm pl-4 hover:text-white transition-colors"
+                >
+                  <span>{limitRateInPayToken ? payToken.symbol : receiveToken.symbol}</span>
+                  <Repeat
+                    size={16}
+                    className={`transition-transform ${limitRateInPayToken ? '' : 'rotate-180'}`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-4 space-y-3">
+              <div className="flex items-center justify-between text-xs text-gray-400">
+                <span>Expires in</span>
+                <Info size={14} />
+              </div>
+              <button
+                onClick={cycleExpiry}
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#131520] rounded-2xl text-white text-base border border-gray-700"
+              >
+                <span>{limitExpiry}</span>
+                <ChevronDown size={18} className="text-gray-400" />
               </button>
             </div>
-          </div>
 
-          <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-5">
-            <div className="flex items-center justify-between text-xs text-gray-400">
-              <span>Expires in</span>
-              <Info size={14} />
-            </div>
             <button
-              onClick={cycleExpiry}
-              className="mt-4 w-full flex items-center justify-between px-4 py-3 bg-[#131520] rounded-2xl text-white text-lg border border-gray-700"
+              className={`w-full py-3 rounded-2xl text-white font-semibold text-base transition-colors ${
+                buttonDisabled ? 'bg-gray-700' : 'bg-[#0052FF] hover:bg-[#0046DD]'
+              }`}
+              disabled={buttonDisabled}
             >
-              <span>{limitExpiry}</span>
-              <ChevronDown size={18} className="text-gray-400" />
+              {parsedAmount <= 0 ? 'Enter an amount' : 'Place Limit Order'}
             </button>
           </div>
         </div>
-
-        <button
-          className={`w-full py-4 rounded-2xl text-white font-semibold text-lg transition-colors ${
-            buttonDisabled ? 'bg-gray-700' : 'bg-[#0052FF] hover:bg-[#0046DD]'
-          }`}
-          disabled={buttonDisabled}
-        >
-          {parsedAmount <= 0 ? 'Enter an amount' : 'Place Limit Order'}
-        </button>
 
         <div className="bg-[#0F1016] rounded-3xl border border-gray-800 p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -605,156 +656,152 @@ export const Swap = () => {
 
     return (
       <>
-        <div className="space-y-4">
-          {renderTokenSelector('You Pay', payToken, handlePayTokenChange, payAmount, setPayAmount, {
-            showBalanceActions: true,
-            balance: payBalance,
-            onFaucet: () => handleFaucet(payToken.symbol),
-            highlight: true,
-            selectorKey: 'dca-pay',
-            rightControl: dcaToggle,
-            enableSupplySelection: true
-          })}
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          <div className="space-y-3">
+            {renderTokenSelector('You Pay', payToken, handlePayTokenChange, payAmount, setPayAmount, {
+              showBalanceActions: true,
+              balance: payBalance,
+              onFaucet: () => handleFaucet(payToken.symbol),
+              highlight: true,
+              selectorKey: 'dca-pay',
+              rightControl: dcaToggle,
+              enableSupplySelection: true,
+              compact: true
+            })}
 
-          <div className="flex justify-center">
-            <div className="w-12 h-12 rounded-full bg-[#0F1016] border border-[#0052FF] flex items-center justify-center text-gray-300">
-              <ArrowDownIcon />
+            <div className="flex justify-center">
+              <div className="w-10 h-10 rounded-full bg-[#0F1016] border border-[#0052FF] flex items-center justify-center text-gray-300">
+                <ArrowDownIcon size={18} />
+              </div>
             </div>
+
+            {renderTokenSelector('You Receive', receiveToken, handleReceiveTokenChange, '', () => {}, {
+              balance: receiveBalance,
+              readOnly: true,
+              highlight: true,
+              selectorKey: 'dca-receive',
+              compact: true
+            })}
           </div>
 
-          {renderTokenSelector('You Receive', receiveToken, handleReceiveTokenChange, '', () => {}, {
-            balance: receiveBalance,
-            readOnly: true,
-            highlight: true,
-            selectorKey: 'dca-receive'
-          })}
-        </div>
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-4">
+                <p className="text-xs uppercase tracking-widest text-gray-400">Invest Every</p>
+                <div className="flex items-center mt-3">
+                  <input
+                    type="number"
+                    min="0"
+                    value={dcaFrequencyValue}
+                    onChange={(e) => setDcaFrequencyValue(e.target.value)}
+                    className="bg-transparent text-2xl font-semibold text-white focus:outline-none w-20"
+                  />
+                  <button
+                    onClick={handleFrequencyUnitCycle}
+                    className="ml-3 flex items-center space-x-2 px-4 py-2 rounded-2xl bg-[#141722] border border-gray-700 text-white"
+                  >
+                    <span>{dcaFrequencyUnit}</span>
+                    <ChevronDown size={16} className="text-gray-400" />
+                  </button>
+                </div>
+              </div>
+              <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-4">
+                <div className="flex items-center justify-between text-xs text-gray-400">
+                  <span>Order Count</span>
+                  <Info size={14} />
+                </div>
+                <div className="flex items-center mt-3">
+                  <input
+                    type="number"
+                    min="0"
+                    value={dcaOrders}
+                    onChange={(e) => setDcaOrders(e.target.value)}
+                    className="bg-transparent text-2xl font-semibold text-white focus:outline-none w-20"
+                  />
+                  <span className="ml-3 text-gray-400">Orders</span>
+                </div>
+              </div>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-5">
-            <p className="text-xs uppercase tracking-widest text-gray-400">Invest Every</p>
-            <div className="flex items-center mt-4">
-              <input
-                type="number"
-                min="0"
-                value={dcaFrequencyValue}
-                onChange={(e) => setDcaFrequencyValue(e.target.value)}
-                className="bg-transparent text-3xl font-semibold text-white focus:outline-none w-24"
-              />
-              <button
-                onClick={handleFrequencyUnitCycle}
-                className="ml-4 flex items-center space-x-2 px-4 py-2 rounded-2xl bg-[#141722] border border-gray-700 text-white"
-              >
-                <span>{dcaFrequencyUnit}</span>
-                <ChevronDown size={16} className="text-gray-400" />
-              </button>
+            <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-4 space-y-3">
+              <div className="flex items-center justify-between text-sm text-gray-400">
+                <span>Current Rate</span>
+                <div className="flex items-center space-x-2 text-white">
+                  <span>
+                    1 {receiveToken.symbol} ≈{' '}
+                    {dcaCurrentRate.toLocaleString(undefined, { maximumFractionDigits: 2 })} {payToken.symbol}
+                  </span>
+                  <Repeat size={16} className="text-gray-400" />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col rounded-2xl border border-gray-800 p-3">
+                  <span className="text-xs text-gray-500 mb-1">Min Price</span>
+                  <input
+                    type="number"
+                    value={dcaMinPrice}
+                    onChange={(e) => setDcaMinPrice(e.target.value)}
+                    placeholder={`${payToken.symbol} per ${receiveToken.symbol}`}
+                    className="bg-transparent text-xl text-white focus:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col rounded-2xl border border-gray-800 p-3">
+                  <span className="text-xs text-gray-500 mb-1">Max Price</span>
+                  <input
+                    type="number"
+                    value={dcaMaxPrice}
+                    onChange={(e) => setDcaMaxPrice(e.target.value)}
+                    placeholder={`${payToken.symbol} per ${receiveToken.symbol}`}
+                    className="bg-transparent text-xl text-white focus:outline-none"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-5">
-            <div className="flex items-center justify-between text-xs text-gray-400">
-              <span>Over</span>
-              <Info size={14} />
-            </div>
-            <div className="flex items-center mt-4">
-              <input
-                type="number"
-                min="0"
-                value={dcaOrders}
-                onChange={(e) => setDcaOrders(e.target.value)}
-                className="bg-transparent text-3xl font-semibold text-white focus:outline-none w-24"
-              />
-              <span className="ml-4 text-gray-400">Orders</span>
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-6 space-y-6">
-          <div>
-            <p className="text-sm text-white mb-1">Set Price Range</p>
-            <p className="text-xs text-gray-400">
-              DCA will only execute if the price falls within your pricing strategy.
-            </p>
-          </div>
-          <div className="flex items-center justify-between text-sm text-gray-400">
-            <span>Current Rate</span>
-            <div className="flex items-center space-x-2 text-white">
-              <span>
-                1 {receiveToken.symbol} ≈ {dcaCurrentRate.toLocaleString(undefined, { maximumFractionDigits: 2 })}{' '}
-                {payToken.symbol}
-              </span>
-              <Repeat size={16} className="text-gray-400" />
+            <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-4 space-y-2 text-sm">
+              <div className="flex items-center justify-between text-gray-400">
+                <span>Details</span>
+                <span>Your first invest cycle starts now</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Sell total</span>
+                <span className="text-white">{formatTokenAmount(totalInvestment, payToken.symbol)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Sell per order</span>
+                <span className="text-white">{formatTokenAmount(perOrderInvestment, payToken.symbol)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Receive</span>
+                <span className="text-white">
+                  {totalReceive > 0 ? formatTokenAmount(totalReceive, receiveToken.symbol) : receiveToken.symbol}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Schedule</span>
+                <span className="text-white">
+                  {dcaFrequencyValue} {dcaFrequencyUnit} · {ordersCount} orders
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Est. end (UTC)</span>
+                <span className="text-white text-right">{estimatedEndText}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Platform fee</span>
+                <span className="text-white">0%</span>
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col rounded-2xl border border-gray-800 p-4">
-              <span className="text-xs text-gray-500 mb-2">Min Price</span>
-              <input
-                type="number"
-                value={dcaMinPrice}
-                onChange={(e) => setDcaMinPrice(e.target.value)}
-                placeholder={`${payToken.symbol} per ${receiveToken.symbol}`}
-                className="bg-transparent text-2xl text-white focus:outline-none"
-              />
-            </div>
-            <div className="flex flex-col rounded-2xl border border-gray-800 p-4">
-              <span className="text-xs text-gray-500 mb-2">Max Price</span>
-              <input
-                type="number"
-                value={dcaMaxPrice}
-                onChange={(e) => setDcaMaxPrice(e.target.value)}
-                placeholder={`${payToken.symbol} per ${receiveToken.symbol}`}
-                className="bg-transparent text-2xl text-white focus:outline-none"
-              />
-            </div>
-          </div>
-        </div>
 
-        <button
-          className={`w-full py-4 rounded-2xl font-semibold text-lg transition-colors ${
-            dcaButtonDisabled ? 'bg-gray-700 text-gray-400' : 'bg-[#0052FF] text-white hover:bg-[#0046DD]'
-          }`}
-          disabled={dcaButtonDisabled}
-          onClick={() => handleCreateDcaOrder(totalInvestment, perOrderInvestment, ordersCount)}
-        >
-          {dcaInsufficient ? `Insufficient ${payToken.symbol}` : 'Create DCA Order'}
-        </button>
-
-        <div className="bg-[#0F1016] rounded-2xl border border-gray-800 p-6 space-y-4">
-          <div className="flex items-center justify-between text-sm text-gray-400">
-            <span>Details</span>
-            <span>Your first invest cycle will begin immediately</span>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Sell total</span>
-              <span className="text-white">{formatTokenAmount(totalInvestment, payToken.symbol)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Sell per order</span>
-              <span className="text-white">{formatTokenAmount(perOrderInvestment, payToken.symbol)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Receive</span>
-              <span className="text-white">
-                {totalReceive > 0
-                  ? formatTokenAmount(totalReceive, receiveToken.symbol)
-                  : receiveToken.symbol}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Invest every</span>
-              <span className="text-white">
-                {dcaFrequencyValue} {dcaFrequencyUnit}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Est. end date (UTC)</span>
-              <span className="text-white text-right">{estimatedEndText}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Platform fee</span>
-              <span className="text-white">0%</span>
-            </div>
+            <button
+              className={`w-full py-3 rounded-2xl font-semibold text-base transition-colors ${
+                dcaButtonDisabled ? 'bg-gray-700 text-gray-400' : 'bg-[#0052FF] text-white hover:bg-[#0046DD]'
+              }`}
+              disabled={dcaButtonDisabled}
+              onClick={() => handleCreateDcaOrder(totalInvestment, perOrderInvestment, ordersCount)}
+            >
+              {dcaInsufficient ? `Insufficient ${payToken.symbol}` : 'Create DCA Order'}
+            </button>
           </div>
         </div>
 
@@ -793,56 +840,63 @@ export const Swap = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex space-x-4">
-          {(['Swap', 'Limit', 'DCA'] as SwapMode[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setMode(tab)}
-              className={`pb-1 text-lg font-medium ${
-                mode === tab ? 'text-white border-b-2 border-[#0052FF]' : 'text-gray-500'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center space-x-3">
-          {mode === 'Swap' && (
-            <div className="flex items-center space-x-2 bg-[#0F1016] border border-gray-800 rounded-full px-3 py-1.5">
-              <span className="text-xs text-gray-400">Aggregator Mode</span>
-              <button
-                onClick={() => setAggregatorMode((prev) => !prev)}
-                className={`w-12 h-6 rounded-full p-1 transition-colors ${
-                  aggregatorMode ? 'bg-[#0052FF]' : 'bg-gray-700'
-                }`}
-              >
-                <span
-                  className={`block w-4 h-4 bg-white rounded-full transform transition-transform ${
-                    aggregatorMode ? 'translate-x-6' : ''
-                  }`}
-                />
-              </button>
-              <button className="text-gray-500 hover:text-white">
-                <Repeat size={16} />
-              </button>
-            </div>
-          )}
-          <div className="flex items-center space-x-2">
-            <button className="px-3 py-1.5 text-xs text-gray-300 border border-gray-800 rounded-full">Merge</button>
-            <button className="px-3 py-1.5 text-xs text-gray-300 border border-gray-800 rounded-full">Lite</button>
-            <button className="px-3 py-1.5 text-xs text-gray-300 border border-gray-800 rounded-full">{slippage}%</button>
-            <button className="p-2 border border-gray-800 rounded-full text-gray-400 hover:text-white">
-              <Settings size={16} />
-            </button>
-          </div>
-        </div>
+    <div className="space-y-8 max-w-5xl mx-auto">
+      <div>
+        <h1 className="text-3xl font-bold text-white">DEX Trading</h1>
+        <p className="text-sm text-gray-400">Swap, set limit orders, or automate DCA strategies.</p>
       </div>
 
-      {mode === 'Swap' && renderSwapControls()}
-      {mode === 'Limit' && renderLimitControls()}
-      {mode === 'DCA' && renderDcaControls()}
+      <div className="bg-[#0F1016] rounded-3xl border border-gray-800 p-6 space-y-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex space-x-6">
+            {(['Swap', 'Limit', 'DCA'] as SwapMode[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setMode(tab)}
+                className={`pb-2 text-lg font-medium border-b-2 ${
+                  mode === tab ? 'text-white border-[#0052FF]' : 'text-gray-500 border-transparent'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-3 justify-end">
+            {mode === 'Swap' && (
+              <div className="flex items-center space-x-2 bg-[#111628] border border-gray-800 rounded-full px-3 py-1.5">
+                <span className="text-xs text-gray-400">Aggregator Mode</span>
+                <button
+                  onClick={() => setAggregatorMode((prev) => !prev)}
+                  className={`w-12 h-6 rounded-full p-1 transition-colors ${
+                    aggregatorMode ? 'bg-[#0052FF]' : 'bg-gray-700'
+                  }`}
+                >
+                  <span
+                    className={`block w-4 h-4 bg-white rounded-full transform transition-transform ${
+                      aggregatorMode ? 'translate-x-6' : ''
+                    }`}
+                  />
+                </button>
+                <button className="text-gray-500 hover:text-white">
+                  <Repeat size={16} />
+                </button>
+              </div>
+            )}
+            <div className="flex items-center space-x-2">
+              <button className="px-3 py-1.5 text-xs text-gray-300 border border-gray-800 rounded-full">Merge</button>
+              <button className="px-3 py-1.5 text-xs text-gray-300 border border-gray-800 rounded-full">Lite</button>
+              <button className="px-3 py-1.5 text-xs text-gray-300 border border-gray-800 rounded-full">{slippage}%</button>
+              <button className="p-2 border border-gray-800 rounded-full text-gray-400 hover:text-white">
+                <Settings size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {mode === 'Swap' && renderSwapControls()}
+        {mode === 'Limit' && renderLimitControls()}
+        {mode === 'DCA' && renderDcaControls()}
+      </div>
     </div>
   );
 };

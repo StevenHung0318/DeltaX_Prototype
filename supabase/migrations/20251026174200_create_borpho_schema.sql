@@ -1,5 +1,5 @@
 /*
-  # Borpho DeFi Lending Protocol Schema
+  # Synex DeFi Lending Protocol Schema
 
   1. New Tables
     - `vaults`
