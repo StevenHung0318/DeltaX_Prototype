@@ -208,25 +208,6 @@ const MOCK_POSITIONS: LiquidityPosition[] = [
     status: "Active",
   },
   {
-    id: "position-usdb",
-    poolId: "aapl-usdc",
-    baseSymbol: "USDB",
-    quoteSymbol: "BUCK",
-    baseLogo:
-      "https://assets.coingecko.com/coins/images/31924/thumb/usdb.jpg?1697008897",
-    quoteLogo:
-      "https://assets.coingecko.com/coins/images/30991/thumb/buck.png?1696529860",
-    feeTier: "0.1%",
-    poolType: "CLMM",
-    apr: 0.01,
-    liquidityUSD: 24.8,
-    claimableYieldUSD: 0.3560347,
-    estDailyYieldUSD: 0.04,
-    currentPrice: 0.999899,
-    priceRange: "0.9994 - 1.0000",
-    status: "Active",
-  },
-  {
     id: "position-eth",
     poolId: "eth-usdc-025",
     baseSymbol: "ETH",
