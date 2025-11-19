@@ -34,7 +34,6 @@ const DCA_FREQUENCY_TO_MS: Record<DcaFrequencyUnit, number> = {
 
 export const Swap = () => {
   const [mode, setMode] = useState<SwapMode>("Swap");
-  const [aggregatorMode, setAggregatorMode] = useState(true);
   const [payToken, setPayToken] = useState<TokenOption>(TOKENS[0]);
   const [receiveToken, setReceiveToken] = useState<TokenOption>(TOKENS[1]);
   const [payAmount, setPayAmount] = useState("1000");
@@ -156,6 +155,8 @@ export const Swap = () => {
     setDcaFrequencyUnit(next);
   };
 
+  const [activeSelectorKey, setActiveSelectorKey] = useState<string | null>(null);
+
   const swapTokens = () => {
     setPayToken(receiveToken);
     setReceiveToken(payToken);
@@ -214,7 +215,6 @@ export const Swap = () => {
       showBalanceActions?: boolean;
       balance?: number;
       readOnly?: boolean;
-      highlight?: boolean;
       selectorKey?: string;
       rightControl?: ReactNode;
       enableSupplySelection?: boolean;
@@ -225,7 +225,7 @@ export const Swap = () => {
       className={`bg-[#0F1016] rounded-2xl ${
         options?.compact ? "p-4" : "p-6"
       } border ${
-        options?.highlight
+        options?.selectorKey && activeSelectorKey === options.selectorKey
           ? "border-[#0052FF] shadow-[0_0_15px_rgba(0,82,255,0.35)]"
           : "border-gray-800"
       }`}
@@ -286,6 +286,12 @@ export const Swap = () => {
           value={amount}
           onChange={(e) => !options?.readOnly && setAmount(e.target.value)}
           readOnly={options?.readOnly}
+          onFocus={() => options?.selectorKey && setActiveSelectorKey(options.selectorKey)}
+          onBlur={() =>
+            setActiveSelectorKey((prev) =>
+              prev === options?.selectorKey ? null : prev
+            )
+          }
           className={`bg-transparent ${
             options?.compact ? "text-3xl" : "text-4xl"
           } font-semibold text-white focus:outline-none w-full ${
@@ -530,7 +536,6 @@ export const Swap = () => {
               {
                 showBalanceActions: true,
                 balance: payBalance,
-                highlight: true,
                 selectorKey: "limit-pay",
                 enableSupplySelection: true,
                 compact: true,
@@ -552,7 +557,6 @@ export const Swap = () => {
               {
                 balance: receiveBalance,
                 readOnly: true,
-                highlight: true,
                 selectorKey: "limit-receive",
                 compact: true,
               }
@@ -750,7 +754,6 @@ export const Swap = () => {
               {
                 showBalanceActions: true,
                 balance: payBalance,
-                highlight: true,
                 selectorKey: "dca-pay",
                 rightControl: dcaToggle,
                 enableSupplySelection: true,
@@ -773,7 +776,6 @@ export const Swap = () => {
               {
                 balance: receiveBalance,
                 readOnly: true,
-                highlight: true,
                 selectorKey: "dca-receive",
                 compact: true,
               }
@@ -969,6 +971,7 @@ export const Swap = () => {
     );
   };
 
+  
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       <div>

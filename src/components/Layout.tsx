@@ -4,7 +4,7 @@ import { formatAddress } from "../utils/format";
 import { Wallet, ChevronDown } from "lucide-react";
 import SynexLogo from "../assets/Synex.png";
 
-type Page = "dashboard" | "markets" | "swap" | "liquidity" | "clob";
+type Page = "dashboard" | "markets" | "swap" | "liquidity" | "clob" | "perp";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -116,7 +116,7 @@ export const Layout: React.FC<LayoutProps> = ({
                             : "text-gray-300 hover:text-white hover:bg-white/5"
                         }`}
                       >
-                        Dashboard
+                        Position
                       </button>
                     </div>
                   )}
@@ -179,6 +179,14 @@ export const Layout: React.FC<LayoutProps> = ({
                     </div>
                   )}
                 </div>
+                <button
+                  onClick={() => handleNavigate("perp")}
+                  className={`${navButtonBase} ${
+                    currentPage === "perp" ? activeNavStyles : inactiveNavStyles
+                  }`}
+                >
+                  <span>Perp</span>
+                </button>
                 <button
                   onClick={connectedAddress ? disconnectWallet : connectWallet}
                   className="flex items-center space-x-2 px-4 py-2 bg-[#0052FF] hover:bg-[#0046DD] text-white rounded-lg transition-colors sm:hidden"
