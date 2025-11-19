@@ -1,3 +1,195 @@
+:root {
+  --axira-text-primary: rgba(255, 255, 255, 1);
+  --axira-text-tertiary: rgba(195, 201, 228, 1);
+  --axira-text-weak: rgba(137, 141, 160, 1);
+  --axira-card-foreground: rgba(30, 30, 37, 1);
+  --axira-card: rgba(22, 22, 27, 1);
+  --axira-background-dark: rgba(10, 11, 13, 1);
+  --axira-field-border: rgba(195, 201, 228, 0.15);
+  --axira-accent-1: rgba(110, 126, 254, 1);
+  --axira-accent-2: rgba(218, 154, 133, 1);
+  --axira-accent-3: rgba(195, 201, 228, 1);
+  --axira-state-success: rgba(163, 255, 110, 1);
+  --axira-state-error: rgba(255, 107, 122, 1);
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+  font-family: "Inter", "Space Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: var(--axira-background-dark);
+  color: var(--axira-text-primary);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  background-color: var(--axira-background-dark);
+}
+
+.text-white {
+  color: var(--axira-text-primary) !important;
+}
+
+.text-gray-400 {
+  color: var(--axira-text-weak) !important;
+}
+
+.text-gray-500,
+.text-gray-300 {
+  color: var(--axira-text-tertiary) !important;
+}
+
+.border-gray-800,
+.border-\[\#1F2330\],
+.border-\[\#1F2333\],
+.border-\[\#2A3042\],
+.border-\[\#2A3042\] {
+  border-color: var(--axira-field-border) !important;
+}
+
+.bg-\[\#05070F\],
+.bg-\[\#050910\],
+.bg-\[\#050911\],
+.bg-\[\#050910\],
+.bg-\[\#06080f\],
+.bg-\[\#060912\],
+.bg-\[\#070c16\],
+.bg-\[\#080C16\],
+.bg-\[\#0A0B0F\],
+.bg-\[\#0A0F1C\],
+.bg-\[\#0B0F1D\],
+.bg-\[\#0C111F\],
+.bg-\[\#0D111C\],
+.bg-\[\#0F1016\],
+.bg-\[\#0F1424\],
+.bg-\[\#10131C\],
+.bg-\[\#141a2f\],
+.bg-\[\#151823\],
+.bg-\[\#161921\],
+.bg-\[\#1C1F2A\],
+.bg-\[\#1E2540\],
+.bg-\[\#1F2330\],
+.bg-\[\#1F2937\] {
+  background-color: var(--axira-card) !important;
+}
+
+.bg-\[\#0B0F1D\],
+.bg-\[\#0D111C\],
+.bg-\[\#0F172A\],
+.bg-\[\#0F1424\],
+.bg-\[\#101829\],
+.bg-\[\#1A1C27\],
+.bg-\[\#1C2338\],
+.bg-\[\#1C2640\],
+.bg-\[\#23273F\],
+.bg-\[\#243152\] {
+  background-color: var(--axira-card-foreground) !important;
+}
+
+.from-\[\#141a2f\] {
+  --tw-gradient-from: rgba(30, 30, 37, 1) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgba(22, 22, 27, 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-\[\#06080f\] {
+  --tw-gradient-to: rgba(10, 11, 13, 1) var(--tw-gradient-to-position);
+}
+
+.bg-gradient-to-br.from-\[\#141a2f\].to-\[\#06080f\] {
+  box-shadow: var(--card-effect);
+}
+
+button {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, filter 0.2s ease;
+  border-radius: 9999px;
+  transform-style: preserve-3d;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--axira-accent-1);
+  outline-offset: 2px;
+}
+
+.bg-\[\#0052FF\],
+.bg-\[\#0046DD\],
+.bg-\[\#4D7DFF\],
+.bg-\[\#6B93FF\],
+.bg-\[\#0052ff\],
+.bg-\[\#1c63ff\] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background-image: linear-gradient(120deg, rgba(110, 126, 254, 1) 0%, rgba(96, 110, 255, 1) 35%, rgba(85, 105, 255, 1) 55%, rgba(72, 96, 255, 1) 75%, rgba(57, 80, 240, 1) 100%);
+  background-color: var(--axira-accent-1) !important;
+  color: var(--axira-text-primary) !important;
+  box-shadow: 0 16px 32px rgba(13, 16, 42, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(195, 201, 228, 0.32);
+  transform: translateY(0);
+  perspective: 800px;
+}
+
+.bg-\[\#0052FF\]::after,
+.bg-\[\#0046DD\]::after,
+.bg-\[\#4D7DFF\]::after,
+.bg-\[\#6B93FF\]::after,
+.bg-\[\#0052ff\]::after,
+.bg-\[\#1c63ff\]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.6), transparent 45%),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.25), transparent 65%);
+  opacity: 0.45;
+  mix-blend-mode: screen;
+  transition: opacity 0.2s ease, transform 0.3s ease;
+  z-index: -1;
+}
+
+
+.hover\:bg-\[\#0046DD\]:hover,
+.hover\:bg-\[\#0046dd\]:hover,
+.hover\:bg-\[\#0046DD\]:focus {
+  background-image: linear-gradient(120deg, rgba(128, 144, 255, 1) 0%, rgba(100, 115, 255, 1) 35%, rgba(86, 106, 255, 1) 65%, rgba(72, 96, 255, 1) 100%);
+  transform: translateY(0);
+  box-shadow: 0 14px 24px rgba(13, 16, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.bg-\[\#0052FF\]:hover::after,
+.bg-\[\#0046DD\]:hover::after,
+.bg-\[\#4D7DFF\]:hover::after,
+.bg-\[\#6B93FF\]:hover::after,
+.bg-\[\#0052ff\]:hover::after,
+.bg-\[\#1c63ff\]:hover::after {
+  opacity: 0.65;
+}
+
+.text-\[\#0052FF\],
+.text-\[\#4D7DFF\],
+.text-\[\#6B93FF\],
+.text-\[\#0052ff\],
+.hover\:text-\[\#0046DD\]:hover {
+  color: var(--axira-accent-1) !important;
+}
+
+.border-\[\#0052FF\],
+.border-\[\#0046DD\],
+.border-\[\#4D7DFF\] {
+  border-color: var(--axira-accent-1) !important;
+}
+
+.hover\:bg-\[\#1F2330\]:hover,
+.hover\:bg-\[\#1F2330\]:focus {
+  background-color: rgba(30, 30, 37, 1) !important;
+}
+
+.bg-\[\#0F172A\],
+.bg-\[\#0F1424\] {
+  border: 1px solid var(--axira-field-border);
+  box-shadow: var(--card-effect);
+}

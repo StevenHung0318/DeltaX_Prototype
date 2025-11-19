@@ -1,6 +1,42 @@
 import { useMemo, useState } from "react";
 import { Search, Filter, Info, ArrowLeft, ChevronDown } from "lucide-react";
 
+const createSparklinePoints = (
+  data: number[],
+  width = 100,
+  height = 40
+): { x: number; y: number }[] => {
+  if (!data.length) return [];
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const step = width / Math.max(data.length - 1, 1);
+  return data.map((value, index) => {
+    const x = index * step;
+    const normalized = (value - min) / range;
+    const y = height - normalized * height;
+    return { x, y };
+  });
+};
+
+const createSparklinePath = (data: number[], width = 100, height = 40) => {
+  const points = createSparklinePoints(data, width, height);
+  if (!points.length) return "";
+  return points
+    .map(
+      (point, index) =>
+        `${index === 0 ? "M" : "L"}${point.x.toFixed(2)},${point.y.toFixed(2)}`
+    )
+    .join(" ");
+};
+
+const createSparklineAreaPath = (data: number[], width = 100, height = 40) => {
+  const points = createSparklinePoints(data, width, height);
+  if (!points.length) return "";
+  const linePath = createSparklinePath(data, width, height);
+  return `${linePath} L${width},${height} L0,${height} Z`;
+};
+
 export interface LiquidityPool {
   id: string;
   baseSymbol: string;
@@ -262,336 +298,381 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
     0
   );
 
-const formatCurrency = (value: number, fractionDigits = 2) =>
-  `$${value.toLocaleString(undefined, {
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
-  })}`;
+  const formatCurrency = (value: number, fractionDigits = 2) =>
+    `$${value.toLocaleString(undefined, {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    })}`;
 
-interface PositionManagerProps {
-  context: LiquidityPositionContext;
-  onBack: () => void;
-}
+  interface PositionManagerProps {
+    context: LiquidityPositionContext;
+    onBack: () => void;
+  }
 
-const PositionManager: React.FC<PositionManagerProps> = ({ context, onBack }) => {
-  const { position, pool } = context;
-  const [mode, setMode] = useState<"increase" | "remove">("increase");
-  const [baseInput, setBaseInput] = useState("");
-  const [quoteInput, setQuoteInput] = useState("");
-  const [removePercent, setRemovePercent] = useState(25);
-  const parseValue = (val: string) => {
-    const amt = Number(val);
-    return Number.isFinite(amt) ? amt : 0;
-  };
+  const PositionManager: React.FC<PositionManagerProps> = ({
+    context,
+    onBack,
+  }) => {
+    const { position, pool } = context;
+    const [mode, setMode] = useState<"increase" | "remove">("increase");
+    const [baseInput, setBaseInput] = useState("");
+    const [quoteInput, setQuoteInput] = useState("");
+    const [removePercent, setRemovePercent] = useState(25);
+    const parseValue = (val: string) => {
+      const amt = Number(val);
+      return Number.isFinite(amt) ? amt : 0;
+    };
 
-  const ManageInput = ({
-    label,
-    token,
-    value,
-    onChange,
-    balance,
-  }: {
-    label: string;
-    token: string;
-    value: string;
-    onChange: (val: string) => void;
-    balance: number;
-  }) => (
-    <div className="bg-[#101829] rounded-2xl border border-gray-800 p-4 space-y-4">
-      <div className="flex items-center justify-between text-xs text-gray-400">
-        <span>{label}</span>
-        <div className="flex items-center space-x-2">
-          <span className="text-gray-500">{balance.toFixed(4)}</span>
-          <button
-            onClick={() => onChange((balance / 2).toString())}
-            className="px-2 py-0.5 rounded-full bg-[#1C2338]"
-          >
-            HALF
-          </button>
-          <button
-            onClick={() => onChange(balance.toString())}
-            className="px-2 py-0.5 rounded-full bg-[#1C2338]"
-          >
-            MAX
-          </button>
+    const ManageInput = ({
+      label,
+      token,
+      value,
+      onChange,
+      balance,
+    }: {
+      label: string;
+      token: string;
+      value: string;
+      onChange: (val: string) => void;
+      balance: number;
+    }) => (
+      <div className="bg-[#101829] rounded-2xl border border-gray-800 p-4 space-y-4">
+        <div className="flex items-center justify-between text-xs text-gray-400">
+          <span>{label}</span>
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-500">{balance.toFixed(4)}</span>
+            <button
+              onClick={() => onChange((balance / 2).toString())}
+              className="px-2 py-0.5 rounded-full bg-[#1C2338]"
+            >
+              HALF
+            </button>
+            <button
+              onClick={() => onChange(balance.toString())}
+              className="px-2 py-0.5 rounded-full bg-[#1C2338]"
+            >
+              MAX
+            </button>
+          </div>
         </div>
-      </div>
-      <div className="flex items-center justify-between">
-        <input
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          type="number"
-          placeholder="0.0"
-          className="bg-transparent text-2xl text-white focus:outline-none flex-1"
-        />
-        <div className="flex items-center space-x-2 text-white font-semibold text-lg">
-          <img
-            src={token === pool.baseSymbol ? pool.baseLogo : pool.quoteLogo}
-            className="w-8 h-8 rounded-full"
+        <div className="flex items-center justify-between">
+          <input
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            type="number"
+            placeholder="0.0"
+            className="bg-transparent text-2xl text-white focus:outline-none flex-1"
           />
-          <span>{token}</span>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="space-y-8">
-      <button
-        onClick={onBack}
-        className="inline-flex items-center space-x-2 text-sm text-gray-400 hover:text-white"
-      >
-        <ArrowLeft size={16} />
-        <span>Back to My Positions</span>
-      </button>
-
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-        <div className="flex items-start space-x-4">
-          <div className="flex -space-x-4">
-            <img src={position.baseLogo} className="w-14 h-14 rounded-full border-2 border-[#0A0F1C]" />
-            <img src={position.quoteLogo} className="w-14 h-14 rounded-full border-2 border-[#0A0F1C]" />
-          </div>
-          <div>
-            <div className="flex items-center flex-wrap gap-3">
-              <h1 className="text-2xl font-semibold text-white">
-                {position.baseSymbol} · {position.quoteSymbol}
-              </h1>
-              <span className="px-3 py-1 rounded-full bg-[#102040] text-[#00C2FF] text-xs font-semibold">
-                {position.poolType}
-              </span>
-              <span className="px-3 py-1 rounded-full border border-gray-700 text-xs text-gray-200">
-                Fee Tier {position.feeTier}
-              </span>
-              <span className="text-xs flex items-center text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1" />
-                {position.status}
-              </span>
-            </div>
-            <p className="text-sm text-gray-400 mt-2">
-              ID · 0xce31…aaf0 · Current pool price {position.currentPrice.toFixed(4)}{" "}
-              {position.quoteSymbol}/{position.baseSymbol}
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4 text-right text-sm text-gray-400">
-          <div>
-            <p>Pool APR</p>
-            <p className="text-lg text-white font-semibold mt-1">
-              {position.apr.toFixed(2)}%
-            </p>
-          </div>
-          <div>
-            <p>Liquidity</p>
-            <p className="text-lg text-white font-semibold mt-1">
-              {formatCurrency(position.liquidityUSD)}
-            </p>
+          <div className="flex items-center space-x-2 text-white font-semibold text-lg">
+            <img
+              src={token === pool.baseSymbol ? pool.baseLogo : pool.quoteLogo}
+              className="w-8 h-8 rounded-full"
+            />
+            <span>{token}</span>
           </div>
         </div>
       </div>
+    );
 
-      <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-gray-800 bg-[#05080f] p-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Price Range</p>
-                <p className="text-2xl font-semibold text-white mt-2">
-                  {position.priceRange}
-                </p>
-              </div>
-              <div className="flex items-center space-x-2 text-xs text-gray-500">
-                <button className="px-3 py-1 rounded-full border border-gray-700">
-                  {position.baseSymbol}
-                </button>
-                <button className="px-3 py-1 rounded-full border border-gray-700">
-                  {position.quoteSymbol}
-                </button>
-              </div>
+    return (
+      <div className="space-y-8">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center space-x-2 text-sm text-gray-400 hover:text-white"
+        >
+          <ArrowLeft size={16} />
+          <span>Back to My Positions</span>
+        </button>
+
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="flex items-start space-x-4">
+            <div className="flex -space-x-4">
+              <img
+                src={position.baseLogo}
+                className="w-14 h-14 rounded-full border-2 border-[#0A0F1C]"
+              />
+              <img
+                src={position.quoteLogo}
+                className="w-14 h-14 rounded-full border-2 border-[#0A0F1C]"
+              />
             </div>
-            <div className="bg-[#080d1b] rounded-2xl border border-gray-900 p-4 space-y-4">
-              <div className="flex items-center justify-between text-xs text-gray-400">
-                <span>Current Pool Price</span>
-                <span>{position.currentPrice.toFixed(4)} {position.quoteSymbol}/{position.baseSymbol}</span>
+            <div>
+              <div className="flex items-center flex-wrap gap-3">
+                <h1 className="text-2xl font-semibold text-white">
+                  {position.baseSymbol} · {position.quoteSymbol}
+                </h1>
+                <span className="px-3 py-1 rounded-full bg-[#102040] text-[#00C2FF] text-xs font-semibold">
+                  {position.poolType}
+                </span>
+                <span className="px-3 py-1 rounded-full border border-gray-700 text-xs text-gray-200">
+                  Fee Tier {position.feeTier}
+                </span>
+                <span className="text-xs flex items-center text-emerald-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1" />
+                  {position.status}
+                </span>
               </div>
-              <div className="relative h-48 bg-gradient-to-b from-[#0b1424] to-[#02050b] rounded-2xl overflow-hidden">
-                <div className="absolute inset-6 flex items-end space-x-1">
-                  {[80, 110, 140, 120, 95, 75, 60, 55, 50].map((height, index) => (
-                    <div
-                      key={`manager-hist-${index}`}
-                      className="flex-1 rounded-full bg-[#1E4FC2]/70"
-                      style={{ height: `${height * 0.6}%` }}
-                    />
-                  ))}
-                </div>
-                <div className="absolute inset-y-6 left-[20%] w-1 bg-[#32E2C1] rounded-full" />
-                <div className="absolute inset-y-6 left-[75%] w-1 bg-[#5FA0FF] rounded-full" />
-                <div className="absolute inset-y-6 left-1/2 w-1 bg-white rounded-full">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 w-2 h-2 rounded-full bg-white" />
-                </div>
-                <div className="absolute bottom-4 left-0 right-0 flex justify-between text-xs text-gray-500 px-6">
-                  <span>1.56</span>
-                  <span>1.80</span>
-                  <span>2.10</span>
-                  <span>2.40</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>30D Price Range</span>
-                <span>1.5637 – 2.7211 {position.quoteSymbol}/{position.baseSymbol}</span>
-              </div>
+              <p className="text-sm text-gray-400 mt-2">
+                ID · 0xce31…aaf0 · Current pool price{" "}
+                {position.currentPrice.toFixed(4)} {position.quoteSymbol}/
+                {position.baseSymbol}
+              </p>
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-4 text-right text-sm text-gray-400">
+            <div>
+              <p>Pool APR</p>
+              <p className="text-lg text-white font-semibold mt-1">
+                {position.apr.toFixed(2)}%
+              </p>
+            </div>
+            <div>
+              <p>Liquidity</p>
+              <p className="text-lg text-white font-semibold mt-1">
+                {formatCurrency(position.liquidityUSD)}
+              </p>
+            </div>
+          </div>
+        </div>
 
-          <div className="rounded-3xl border border-gray-800 bg-[#05080f] p-6 space-y-4">
-            <div className="flex items-center justify-between text-sm text-gray-400">
-              <span>Liquidity</span>
-              <span className="text-white font-semibold">{formatCurrency(position.liquidityUSD)}</span>
-            </div>
-            <div className="flex items-center text-xs text-gray-400">
-              <span className="text-sky-400 font-semibold mr-2">
-                {position.baseSymbol} 70.82%
-              </span>
-              <div className="flex-1 h-3 rounded-full bg-[#0a111f] overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#2ee7c9] via-[#25b8f5] to-[#1c63ff]" style={{ width: "70%" }} />
-              </div>
-              <span className="text-emerald-400 font-semibold ml-2">
-                29.18% {position.quoteSymbol}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm mt-4">
-              <div className="flex items-center space-x-3">
-                <img src={position.baseLogo} className="w-9 h-9 rounded-full" />
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-gray-800 bg-[#05080f] p-6 space-y-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white font-semibold">0.97 {position.baseSymbol}</p>
-                  <p className="text-xs text-gray-500">$1.62</p>
+                  <p className="text-sm text-gray-400">Price Range</p>
+                  <p className="text-2xl font-semibold text-white mt-2">
+                    {position.priceRange}
+                  </p>
                 </div>
-              </div>
-              <div className="flex items-center space-x-3 justify-end">
-                <div className="text-right">
-                  <p className="text-white font-semibold">0.66 {position.quoteSymbol}</p>
-                  <p className="text-xs text-gray-500">$0.66</p>
-                </div>
-                <img src={position.quoteLogo} className="w-9 h-9 rounded-full" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-gray-800 bg-[#05080f] p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Claimable Yield</p>
-                <p className="text-white text-2xl mt-1">
-                  {formatCurrency(position.claimableYieldUSD, 4)}
-                </p>
-                <p className="text-xs text-gray-500">Est. Daily Yield +${position.estDailyYieldUSD.toFixed(2)}</p>
-              </div>
-              <button className="px-4 py-2 rounded-full bg-[#00C2FF] text-black text-sm font-semibold">
-                Claim
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm text-gray-400">
-              <div>
-                <p>Fees</p>
-                <p className="text-white text-lg mt-1">0.00012 {position.baseSymbol}</p>
-              </div>
-              <div>
-                <p>Fees</p>
-                <p className="text-white text-lg mt-1">0.00022 {position.quoteSymbol}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="rounded-3xl border border-gray-800 bg-[#050b18] p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-sm text-white">
-                {(["increase", "remove"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setMode(tab)}
-                    className={`px-4 py-1.5 rounded-full border ${
-                      mode === tab ? "border-[#00C2FF] text-white" : "border-gray-700 text-gray-400"
-                    }`}
-                  >
-                    {tab === "increase" ? "Increase" : "Remove"}
+                <div className="flex items-center space-x-2 text-xs text-gray-500">
+                  <button className="px-3 py-1 rounded-full border border-gray-700">
+                    {position.baseSymbol}
                   </button>
-                ))}
+                  <button className="px-3 py-1 rounded-full border border-gray-700">
+                    {position.quoteSymbol}
+                  </button>
+                </div>
               </div>
-              <button className="px-3 py-1 rounded-full border border-gray-700 text-gray-300 text-xs flex items-center space-x-1">
-                <span>0.5%</span>
-                <ChevronDown size={12} />
-              </button>
+              <div className="bg-[#080d1b] rounded-2xl border border-gray-900 p-4 space-y-4">
+                <div className="flex items-center justify-between text-xs text-gray-400">
+                  <span>Current Pool Price</span>
+                  <span>
+                    {position.currentPrice.toFixed(4)} {position.quoteSymbol}/
+                    {position.baseSymbol}
+                  </span>
+                </div>
+                <div className="relative h-48 bg-gradient-to-b from-[#0b1424] to-[#02050b] rounded-2xl overflow-hidden">
+                  <div className="absolute inset-6 flex items-end space-x-1">
+                    {[80, 110, 140, 120, 95, 75, 60, 55, 50].map(
+                      (height, index) => (
+                        <div
+                          key={`manager-hist-${index}`}
+                          className="flex-1 rounded-full bg-[#1E4FC2]/70"
+                          style={{ height: `${height * 0.6}%` }}
+                        />
+                      )
+                    )}
+                  </div>
+                  <div className="absolute inset-y-6 left-[20%] w-1 bg-[#32E2C1] rounded-full" />
+                  <div className="absolute inset-y-6 left-[75%] w-1 bg-[#5FA0FF] rounded-full" />
+                  <div className="absolute inset-y-6 left-1/2 w-1 bg-white rounded-full">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 w-2 h-2 rounded-full bg-white" />
+                  </div>
+                  <div className="absolute bottom-4 left-0 right-0 flex justify-between text-xs text-gray-500 px-6">
+                    <span>1.56</span>
+                    <span>1.80</span>
+                    <span>2.10</span>
+                    <span>2.40</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>30D Price Range</span>
+                  <span>
+                    1.5637 – 2.7211 {position.quoteSymbol}/{position.baseSymbol}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <ManageInput
-              label="Token A"
-              token={pool.baseSymbol}
-              value={baseInput}
-              onChange={setBaseInput}
-              balance={pool.userBaseBalance}
-            />
-            <ManageInput
-              label="Token B"
-              token={pool.quoteSymbol}
-              value={quoteInput}
-              onChange={setQuoteInput}
-              balance={pool.userQuoteBalance}
-            />
-
-            {mode === "remove" && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>Remove Percentage</span>
-                  <span className="text-white font-semibold">{removePercent}%</span>
+            <div className="rounded-3xl border border-gray-800 bg-[#05080f] p-6 space-y-4">
+              <div className="flex items-center justify-between text-sm text-gray-400">
+                <span>Liquidity</span>
+                <span className="text-white font-semibold">
+                  {formatCurrency(position.liquidityUSD)}
+                </span>
+              </div>
+              <div className="flex items-center text-xs text-gray-400">
+                <span className="text-sky-400 font-semibold mr-2">
+                  {position.baseSymbol} 70.82%
+                </span>
+                <div className="flex-1 h-3 rounded-full bg-[#0a111f] overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#2ee7c9] via-[#25b8f5] to-[#1c63ff]"
+                    style={{ width: "70%" }}
+                  />
                 </div>
-                <div className="flex items-center space-x-2">
-                  {[25, 50, 75, 100].map((value) => (
+                <span className="text-emerald-400 font-semibold ml-2">
+                  29.18% {position.quoteSymbol}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm mt-4">
+                <div className="flex items-center space-x-3">
+                  <img
+                    src={position.baseLogo}
+                    className="w-9 h-9 rounded-full"
+                  />
+                  <div>
+                    <p className="text-white font-semibold">
+                      0.97 {position.baseSymbol}
+                    </p>
+                    <p className="text-xs text-gray-500">$1.62</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 justify-end">
+                  <div className="text-right">
+                    <p className="text-white font-semibold">
+                      0.66 {position.quoteSymbol}
+                    </p>
+                    <p className="text-xs text-gray-500">$0.66</p>
+                  </div>
+                  <img
+                    src={position.quoteLogo}
+                    className="w-9 h-9 rounded-full"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-gray-800 bg-[#05080f] p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">Claimable Yield</p>
+                  <p className="text-white text-2xl mt-1">
+                    {formatCurrency(position.claimableYieldUSD, 4)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Est. Daily Yield +${position.estDailyYieldUSD.toFixed(2)}
+                  </p>
+                </div>
+                <button className="px-4 py-2 rounded-full bg-[#00C2FF] text-black text-sm font-semibold">
+                  Claim
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm text-gray-400">
+                <div>
+                  <p>Fees</p>
+                  <p className="text-white text-lg mt-1">
+                    0.00012 {position.baseSymbol}
+                  </p>
+                </div>
+                <div>
+                  <p>Fees</p>
+                  <p className="text-white text-lg mt-1">
+                    0.00022 {position.quoteSymbol}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-3xl border border-gray-800 bg-[#050b18] p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 text-sm text-white">
+                  {(["increase", "remove"] as const).map((tab) => (
                     <button
-                      key={value}
-                      onClick={() => setRemovePercent(value)}
-                      className={`px-3 py-1.5 rounded-full border text-xs ${
-                        removePercent === value
+                      key={tab}
+                      onClick={() => setMode(tab)}
+                      className={`px-4 py-1.5 rounded-full border ${
+                        mode === tab
                           ? "border-[#00C2FF] text-white"
                           : "border-gray-700 text-gray-400"
                       }`}
                     >
-                      {value === 100 ? "MAX" : `${value}%`}
+                      {tab === "increase" ? "Increase" : "Remove"}
                     </button>
                   ))}
                 </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={removePercent}
-                  onChange={(event) =>
-                    setRemovePercent(Number(event.target.value))
-                  }
-                  className="w-full accent-[#00C2FF]"
-                />
+                <button className="px-3 py-1 rounded-full border border-gray-700 text-gray-300 text-xs flex items-center space-x-1">
+                  <span>0.5%</span>
+                  <ChevronDown size={12} />
+                </button>
               </div>
-            )}
 
-            <div className="text-sm text-gray-400">
-              <p>Total Amount</p>
-              <p className="text-white text-lg mt-1">
-                {formatCurrency(parseValue(baseInput) + parseValue(quoteInput))}
-              </p>
+              <ManageInput
+                label="Token A"
+                token={pool.baseSymbol}
+                value={baseInput}
+                onChange={setBaseInput}
+                balance={pool.userBaseBalance}
+              />
+              <ManageInput
+                label="Token B"
+                token={pool.quoteSymbol}
+                value={quoteInput}
+                onChange={setQuoteInput}
+                balance={pool.userQuoteBalance}
+              />
+
+              {mode === "remove" && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>Remove Percentage</span>
+                    <span className="text-white font-semibold">
+                      {removePercent}%
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {[25, 50, 75, 100].map((value) => (
+                      <button
+                        key={value}
+                        onClick={() => setRemovePercent(value)}
+                        className={`px-3 py-1.5 rounded-full border text-xs ${
+                          removePercent === value
+                            ? "border-[#00C2FF] text-white"
+                            : "border-gray-700 text-gray-400"
+                        }`}
+                      >
+                        {value === 100 ? "MAX" : `${value}%`}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={removePercent}
+                    onChange={(event) =>
+                      setRemovePercent(Number(event.target.value))
+                    }
+                    className="w-full accent-[#00C2FF]"
+                  />
+                </div>
+              )}
+
+              <div className="text-sm text-gray-400">
+                <p>Total Amount</p>
+                <p className="text-white text-lg mt-1">
+                  {formatCurrency(
+                    parseValue(baseInput) + parseValue(quoteInput)
+                  )}
+                </p>
+              </div>
+
+              <button className="w-full py-3 rounded-2xl bg-[#0052FF] text-white font-semibold hover:bg-[#0046DD]">
+                {mode === "increase"
+                  ? "Increase Liquidity"
+                  : "Remove Liquidity"}
+              </button>
             </div>
-
-            <button className="w-full py-3 rounded-2xl bg-[#0052FF] text-white font-semibold hover:bg-[#0046DD]">
-              {mode === "increase" ? "Increase Liquidity" : "Remove Liquidity"}
-            </button>
           </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
-  const chartMax = Math.max(...MOCK_POOLS[0].volumeHistory);
   const filteredPositions = useMemo(() => {
     return MOCK_POSITIONS.filter((position) => {
       const matchesSearch =
@@ -608,6 +689,21 @@ const PositionManager: React.FC<PositionManagerProps> = ({ context, onBack }) =>
     (sum, pos) => sum + pos.claimableYieldUSD,
     0
   );
+  const tvlLineSeries = [
+    [
+      0.363, 0.456, 0.453, 0.45, 0.411, 0.452, 0.51, 0.606, 0.67, 0.696,
+      0.678, 0.622, 0.627, 0.665, 0.774, 0.903, 0.955, 0.986, 1.002, 0.946,
+      1.001, 1.061, 1.191, 1.259,
+    ].map((ratio) => totalValueLocked * ratio),
+  ];
+  const tradingVolumeHistorySeries = [
+    0.55, 0.6, 0.58, 0.63, 0.7, 0.65, 0.72, 0.75, 0.69, 0.74, 0.7, 0.67, 0.71,
+    0.68, 0.66,
+  ].map((ratio) => tradingVolume24h * ratio);
+  const tradingVolumeSecondaryHistory = tradingVolumeHistorySeries.map(
+    (value) => value * 0.6
+  );
+  const maxTradingVolumeHistory = Math.max(...tradingVolumeHistorySeries, 1);
 
   if (managingContext) {
     return (
@@ -621,47 +717,132 @@ const PositionManager: React.FC<PositionManagerProps> = ({ context, onBack }) =>
   return (
     <div className="space-y-8">
       <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 bg-gradient-to-br from-[#141a2f] to-[#06080f] rounded-3xl p-6 border border-white/5 shadow-lg">
-          <div className="text-sm text-gray-400">Total Value Locked</div>
-          <div className="text-3xl font-bold text-white mt-2">
-            {formatCurrency(totalValueLocked, 2)}
+        <div className="flex-1 rounded-3xl border border-gray-800 bg-[#050910] p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-400">Total TVL</div>
+              <div className="text-3xl font-bold text-white mt-2">
+                {formatCurrency(totalValueLocked, 2)}
+              </div>
+            </div>
           </div>
-          <div className="text-sm text-gray-400 mt-6">Cumulative Volume</div>
-          <div className="text-2xl font-semibold text-white mt-1">
-            {formatCurrency(cumulativeVolume, 2)}
+          <div className="h-32 w-full">
+            <svg
+              viewBox="0 0 100 40"
+              preserveAspectRatio="none"
+              className="w-full h-full"
+            >
+              <defs>
+                <linearGradient
+                  id="dexTvlGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop offset="0%" stopColor="rgba(110, 126, 254, 1)" />
+                  <stop offset="40%" stopColor="rgba(96, 110, 255, 1)" />
+                  <stop offset="80%" stopColor="rgba(85, 105, 255, 1)" />
+                  <stop offset="100%" stopColor="rgba(72, 96, 255, 1)" />
+                </linearGradient>
+                <linearGradient
+                  id="dexTvlFill"
+                  x1="0%"
+                  y1="0%"
+                  x2="0%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="rgba(110,126,254,0.25)" />
+                  <stop offset="100%" stopColor="rgba(10,11,13,0)" />
+                </linearGradient>
+              </defs>
+              <path
+                d={createSparklineAreaPath(tvlLineSeries[0])}
+                fill="url(#dexTvlFill)"
+                opacity={0.4}
+              />
+              <path
+                d={createSparklinePath(tvlLineSeries[0])}
+                fill="none"
+                stroke="url(#dexTvlGradient)"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
         </div>
-        <div className="flex-1 rounded-3xl border border-gray-800 bg-[#0D111C] p-6">
+        <div className="flex-1 rounded-3xl border border-gray-800 bg-[#050910] p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-sm text-gray-400">Trading Volume (24H)</div>
-              <div className="text-2xl font-semibold text-white">
+              <div className="text-2xl font-semibold text-white mt-1">
                 {formatCurrency(tradingVolume24h, 2)}
               </div>
             </div>
-            <div className="flex space-x-2 text-xs text-gray-400">
-              {["D", "W", "M"].map((label) => (
-                <button
-                  key={label}
-                  className={`px-3 py-1 rounded-full border border-gray-700 ${
-                    label === "D"
-                      ? "text-white border-[#0052FF]"
-                      : "hover:text-white"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
           </div>
-          <div className="flex items-end h-32 space-x-2">
-            {MOCK_POOLS[0].volumeHistory.map((value, index) => (
-              <div
-                key={`${value}-${index}`}
-                className="bg-[#1C63FF]/60 rounded-full flex-1"
-                style={{ height: `${(value / chartMax) * 100}%` }}
-              />
-            ))}
+          <div className="h-40 w-full">
+            <svg
+              viewBox="0 0 100 40"
+              preserveAspectRatio="none"
+              className="w-full h-full"
+            >
+              {tradingVolumeHistorySeries.map((value, index) => {
+                const segment = 100 / tradingVolumeHistorySeries.length;
+                const width = Math.max(segment * 0.6, 1.5);
+                const x = index * segment + (segment - width) / 2;
+                const height = (value / maxTradingVolumeHistory) * 40;
+                const y = 40 - height;
+                const secondaryHeight =
+                  (tradingVolumeSecondaryHistory[index] /
+                    maxTradingVolumeHistory) *
+                  40;
+                const secondaryY = 40 - secondaryHeight;
+                return (
+                  <g key={`dex-volume-${index}`}>
+                    <rect
+                      x={x}
+                      y={y}
+                      width={width}
+                      height={height}
+                      rx={width * 0.2}
+                      fill="url(#dexVolumeBase)"
+                      opacity={0.85}
+                    />
+                    <rect
+                      x={x}
+                      y={secondaryY}
+                      width={width}
+                      height={secondaryHeight}
+                      rx={width * 0.2}
+                      fill="url(#dexVolumeAccent)"
+                    />
+                  </g>
+                );
+              })}
+              <defs>
+                <linearGradient
+                  id="dexVolumeBase"
+                  x1="0%"
+                  y1="100%"
+                  x2="0%"
+                  y2="0%"
+                >
+                  <stop offset="0%" stopColor="#0B1120" />
+                  <stop offset="100%" stopColor="#111B33" />
+                </linearGradient>
+                <linearGradient
+                  id="dexVolumeAccent"
+                  x1="0%"
+                  y1="100%"
+                  x2="0%"
+                  y2="0%"
+                >
+                  <stop offset="0%" stopColor="#23273F" />
+                  <stop offset="100%" stopColor="#6E7EFE" />
+                </linearGradient>
+              </defs>
+            </svg>
           </div>
         </div>
       </div>
@@ -838,8 +1019,9 @@ const PositionManager: React.FC<PositionManagerProps> = ({ context, onBack }) =>
                     <button
                       onClick={() => {
                         const targetPool =
-                          MOCK_POOLS.find((pool) => pool.id === position.poolId) ||
-                          MOCK_POOLS[0];
+                          MOCK_POOLS.find(
+                            (pool) => pool.id === position.poolId
+                          ) || MOCK_POOLS[0];
                         setManagingContext({ position, pool: targetPool });
                       }}
                       className="px-5 py-2 rounded-full border border-gray-800 text-white hover:bg-white/10 text-sm"

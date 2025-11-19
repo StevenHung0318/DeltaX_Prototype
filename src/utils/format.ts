@@ -23,6 +23,14 @@ export const formatAddress = (address: string): string => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
+export const formatFullUSD = (amount?: number | null, fractionDigits: number = 2): string => {
+  const safeAmount = Number(amount ?? 0) || 0;
+  return `$${safeAmount.toLocaleString(undefined, {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits
+  })}`;
+};
+
 export const calculateProjectedEarnings = (amount: number, apy: number) => {
   const daily = (amount * apy) / 100 / 365;
   const monthly = (amount * apy) / 100 / 12;

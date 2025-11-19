@@ -136,6 +136,31 @@ const STOCK_MARKETS = [
   }
 ];
 
+const FALLBACK_VAULTS: Vault[] = [
+  {
+    id: 'mock-vault-eth',
+    name: 'Prime ETH Vault',
+    asset: 'ETH',
+    curator: 'Synex Labs',
+    total_deposits: 1_200_000,
+    available_liquidity: 820_000,
+    apy: 5.48,
+    supply_cap: 2_500_000,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'mock-vault-usdc',
+    name: 'Prime USDC Vault',
+    asset: 'USDC',
+    curator: 'Synex Labs',
+    total_deposits: 3_450_000,
+    available_liquidity: 1_150_000,
+    apy: 4.86,
+    supply_cap: 5_000_000,
+    created_at: new Date().toISOString()
+  }
+];
+
 interface ProtocolContextType {
   vaults: Vault[];
   markets: Market[];
@@ -200,7 +225,11 @@ export const ProtocolProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         console.error('Error loading markets:', marketsRes.error);
       }
 
-      if (vaultsRes.data) setVaults(vaultsRes.data);
+      const vaultData =
+        vaultsRes.data && vaultsRes.data.length > 0
+          ? vaultsRes.data
+          : FALLBACK_VAULTS;
+      setVaults(vaultData);
 
       const baseMarkets =
         marketsRes.data && marketsRes.data.length > 0

@@ -136,7 +136,7 @@ export const Layout: React.FC<LayoutProps> = ({
                         : inactiveNavStyles
                     }`}
                   >
-                    <span>DEX</span>
+                    <span>Spot</span>
                     <ChevronDown
                       size={16}
                       className={`transition-transform duration-200 ${
