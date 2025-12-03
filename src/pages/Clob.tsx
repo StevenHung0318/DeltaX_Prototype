@@ -291,7 +291,7 @@ export const Clob: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 md:px-0">
       <section className="rounded-3xl border border-[#1f2c4e]/80 bg-[#0f1424]/90 p-6 shadow-[0px_25px_60px_rgba(2,6,23,0.55)] backdrop-blur-xl">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -398,7 +398,7 @@ export const Clob: React.FC = () => {
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[2.1fr_0.9fr]">
+      <div className="grid gap-6 lg:grid-cols-1 xl:grid-cols-[2.1fr_0.9fr]">
         <div className="space-y-6">
           <div className="rounded-3xl border border-[#1f2c4e]/80 bg-[#0d1323]/95 p-4">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
@@ -448,10 +448,13 @@ export const Clob: React.FC = () => {
                 </select>
               </div>
             </div>
-            <div className="mt-4 grid grid-cols-3 text-xs text-gray-400">
+            <div className="hidden md:grid grid-cols-3 text-xs text-gray-400">
               <span>Price ({quoteSymbol})</span>
               <span>Size ({baseSymbol})</span>
               <span className="text-right">Total</span>
+            </div>
+            <div className="md:hidden text-xs text-gray-400 uppercase tracking-wide">
+              Orderbook
             </div>
             <div className="mt-2 space-y-1 text-sm">
               {askDepth
@@ -465,12 +468,17 @@ export const Clob: React.FC = () => {
                         width: `${(order.cumulative / maxDepth) * 100}%`,
                       }}
                     />
-                    <div className="relative grid grid-cols-3 px-2 py-1 text-rose-200">
+                    <div className="relative hidden md:grid grid-cols-3 px-2 py-1 text-rose-200">
                       <span>${formatNumber(order.price)}</span>
                       <span>{order.size.toFixed(2)}</span>
                       <span className="text-right">
                         {order.cumulative.toFixed(2)}
                       </span>
+                    </div>
+                    <div className="md:hidden relative flex justify-between px-2 py-1 text-rose-200 text-xs">
+                      <span>${formatNumber(order.price)}</span>
+                      <span>{order.size.toFixed(2)}</span>
+                      <span>{order.cumulative.toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
@@ -488,12 +496,17 @@ export const Clob: React.FC = () => {
                       width: `${(order.cumulative / maxDepth) * 100}%`,
                     }}
                   />
-                  <div className="relative grid grid-cols-3 px-2 py-1 text-emerald-200">
+                  <div className="relative hidden md:grid grid-cols-3 px-2 py-1 text-emerald-200">
                     <span>${formatNumber(order.price)}</span>
                     <span>{order.size.toFixed(2)}</span>
                     <span className="text-right">
                       {order.cumulative.toFixed(2)}
                     </span>
+                  </div>
+                  <div className="md:hidden relative flex justify-between px-2 py-1 text-emerald-200 text-xs">
+                    <span>${formatNumber(order.price)}</span>
+                    <span>{order.size.toFixed(2)}</span>
+                    <span>{order.cumulative.toFixed(2)}</span>
                   </div>
                 </div>
               ))}
@@ -619,7 +632,7 @@ export const Clob: React.FC = () => {
             ? mockOpenOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="grid grid-cols-5 gap-4 rounded-2xl bg-[#0f182a] p-4 border border-[#18203a]"
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 rounded-2xl bg-[#0f182a] p-4 border border-[#18203a]"
                 >
                   <div>
                     <p className="text-gray-400 text-xs">Market</p>
@@ -655,7 +668,7 @@ export const Clob: React.FC = () => {
             : mockTradeHistory.map((trade) => (
                 <div
                   key={trade.id}
-                  className="grid grid-cols-5 gap-4 rounded-2xl bg-[#0f182a] p-4 border border-[#18203a]"
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 rounded-2xl bg-[#0f182a] p-4 border border-[#18203a]"
                 >
                   <div>
                     <p className="text-gray-400 text-xs">Market</p>

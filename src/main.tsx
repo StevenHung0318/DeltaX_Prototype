@@ -2,11 +2,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import synexLogo from './assets/Synexlogo.png';
+import waterxLogo from './assets/WaterX.png';
 
 const favicon = document.getElementById('favicon') as HTMLLinkElement | null;
 if (favicon) {
-  favicon.href = synexLogo;
+  favicon.href = waterxLogo;
   favicon.type = 'image/png';
 }
 

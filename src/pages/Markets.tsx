@@ -1810,8 +1810,8 @@ export const Markets: React.FC<MarketsProps> = ({
   return (
     <div className="space-y-8">
       {transactionToast}
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 rounded-3xl border border-gray-800 bg-[#050910] p-6 space-y-4">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-3xl border border-gray-800 bg-[#050910] p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm text-gray-400">Total Value Locked</div>
@@ -1863,7 +1863,7 @@ export const Markets: React.FC<MarketsProps> = ({
             </svg>
           </div>
         </div>
-        <div className="flex-1 rounded-3xl border border-gray-800 bg-[#050910] p-6">
+        <div className="rounded-3xl border border-gray-800 bg-[#050910] p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-sm text-gray-400">Available Liquidity</div>
@@ -1999,7 +1999,7 @@ export const Markets: React.FC<MarketsProps> = ({
       </div>
 
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 w-full lg:w-auto">
           <h1 className="text-2xl font-bold text-white">Lending Markets</h1>
           <p className="text-sm text-gray-400 sr-only">
             {marketPageDescription}
@@ -2026,7 +2026,7 @@ export const Markets: React.FC<MarketsProps> = ({
             ))}
           </div>
         </div>
-        <div className="flex items-center space-x-3 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
           <div className="flex items-center space-x-2 bg-[#0F1424] border border-gray-800 rounded-2xl px-3 py-2 w-full lg:w-80">
             <Search size={16} className="text-gray-500" />
             <input
@@ -2037,7 +2037,7 @@ export const Markets: React.FC<MarketsProps> = ({
               className="bg-transparent text-sm text-white focus:outline-none flex-1"
             />
           </div>
-          <button className="p-2 rounded-full border border-gray-800 text-gray-400 hover:text-white">
+          <button className="p-2 rounded-full border border-gray-800 text-gray-400 hover:text-white self-start sm:self-auto">
             <Filter size={16} />
           </button>
         </div>
@@ -2053,7 +2053,7 @@ export const Markets: React.FC<MarketsProps> = ({
         </div>
       ) : (
         <div className="bg-[#0F1016] rounded-3xl border border-gray-800 overflow-hidden">
-          <div className="grid grid-cols-7 gap-4 px-6 py-4 border-b border-gray-800 text-sm font-medium text-gray-400">
+          <div className="hidden lg:grid grid-cols-7 gap-4 px-6 py-4 border-b border-gray-800 text-sm font-medium text-gray-400">
             <div>Collateral</div>
             <div>Loan</div>
             <div>Market Size</div>
@@ -2063,7 +2063,8 @@ export const Markets: React.FC<MarketsProps> = ({
             <div>Actions</div>
           </div>
 
-          {filteredMarkets.map((market) => {
+          <div className="divide-y divide-gray-800">
+            {filteredMarkets.map((market) => {
             const availableLiquidity = Math.max(
               market.total_size - market.total_borrowed,
               0
@@ -2081,76 +2082,101 @@ export const Markets: React.FC<MarketsProps> = ({
                 tabIndex={0}
                 onClick={() => handleMarketSelect(market.id)}
                 onKeyDown={(event) => handleMarketSelectKey(event, market.id)}
-                className="w-full grid grid-cols-7 gap-4 px-6 py-6 hover:bg-[#0A0B0F] transition-colors text-left border-b border-gray-800 last:border-b-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0052FF]"
+                className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 px-4 sm:px-6 py-5 hover:bg-[#0A0B0F] transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0052FF]"
               >
-                <div className="flex items-center space-x-3 min-w-0">
-                  <MarketLogo
-                    ticker={market.collateral_asset}
-                    name={market.display_name}
-                    logo={market.logo}
-                    size="sm"
-                  />
-                  <div className="font-semibold text-white">
-                    {market.collateral_asset}
-                  </div>
-                  <div className="text-xs text-gray-500 sr-only">
-                    Price: {formatUSD(market.collateral_price)}
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <MarketLogo
-                    ticker={market.loan_asset}
-                    logo={
-                      TOKEN_LOGOS[market.loan_asset.toUpperCase()] ?? undefined
-                    }
-                    size="sm"
-                  />
-                  <div className="text-white font-mono">
-                    {market.loan_asset}
+                <div className="space-y-2">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide lg:hidden">
+                    Collateral
+                  </span>
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <MarketLogo
+                      ticker={market.collateral_asset}
+                      name={market.display_name}
+                      logo={market.logo}
+                      size="sm"
+                    />
+                    <div className="font-semibold text-white">
+                      {market.collateral_asset}
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-col justify-center h-full">
+                <div className="space-y-2">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide lg:hidden">
+                    Loan
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <MarketLogo
+                      ticker={market.loan_asset}
+                      logo={
+                        TOKEN_LOGOS[market.loan_asset.toUpperCase()] ?? undefined
+                      }
+                      size="sm"
+                    />
+                    <div className="text-white font-mono">
+                      {market.loan_asset}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide lg:hidden">
+                    Market Size
+                  </span>
                   <div className="text-white font-mono">
                     {formatUSDCAmount(market.total_size)}
                   </div>
                 </div>
-                <div className="flex flex-col justify-center h-full">
+                <div className="space-y-2">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide lg:hidden">
+                    Available Liquidity
+                  </span>
                   <div className="text-white font-mono">
                     {formatUSDCAmount(availableLiquidity)}
                   </div>
                 </div>
-                <div className="flex flex-col justify-center h-full">
+                <div className="space-y-2">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide lg:hidden">
+                    Supply APR
+                  </span>
                   <div className="text-[#00D395] font-semibold">
                     {formatPercent(supplyApy)}
                   </div>
                 </div>
-                <div className="flex flex-col justify-center h-full">
+                <div className="space-y-2">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide lg:hidden">
+                    Borrow APR
+                  </span>
                   <div className="text-[#FFB237] font-semibold flex items-center space-x-2">
                     <span>{formatPercent(market.borrow_apy)}</span>
                     <TrendingUp size={16} />
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={(event) =>
-                      handleMarketAction(market.id, "borrow", event)
-                    }
-                    className="px-3 py-2 rounded-lg border border-[#2A3042] text-sm font-medium text-white hover:bg-[#1F2330] transition-colors"
-                  >
-                    Borrow
-                  </button>
-                  <button
-                    onClick={(event) =>
-                      handleMarketAction(market.id, "supply", event)
-                    }
-                    className="px-3 py-2 rounded-lg bg-[#0052FF] hover:bg-[#0046DD] text-sm font-medium text-white transition-colors"
-                  >
-                    Supply
-                  </button>
+                <div className="space-y-2 sm:space-y-0 sm:flex sm:flex-col sm:justify-center">
+                  <span className="text-xs text-gray-500 uppercase tracking-wide lg:hidden">
+                    Actions
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={(event) =>
+                        handleMarketAction(market.id, "borrow", event)
+                      }
+                      className="px-3 py-2 rounded-lg border border-[#2A3042] text-sm font-medium text-white hover:bg-[#1F2330] transition-colors"
+                    >
+                      Borrow
+                    </button>
+                    <button
+                      onClick={(event) =>
+                        handleMarketAction(market.id, "supply", event)
+                      }
+                      className="px-3 py-2 rounded-lg bg-[#0052FF] hover:bg-[#0046DD] text-sm font-medium text-white transition-colors"
+                    >
+                      Supply
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
+          </div>
         </div>
       )}
     </div>

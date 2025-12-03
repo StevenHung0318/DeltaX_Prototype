@@ -256,7 +256,7 @@ const activeVault = useMemo<Vault | null>(() => {
 
       <div className="space-y-6">
         <section className="bg-[#0F1016] border border-gray-800 rounded-3xl overflow-hidden">
-            <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+            <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-6 py-4 border-b border-gray-800">
               <div>
                 <div className="flex items-center gap-2 text-white font-semibold">
                   <TrendingUp size={18} className="text-[#00D395]" />
@@ -384,7 +384,7 @@ const activeVault = useMemo<Vault | null>(() => {
           </section>
 
         <section className="bg-[#0F1016] border border-gray-800 rounded-3xl overflow-hidden">
-          <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+            <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-6 py-4 border-b border-gray-800">
             <div>
               <div className="flex items-center gap-2 text-white font-semibold">
                 <TrendingUp size={18} className="text-[#FFB237]" />

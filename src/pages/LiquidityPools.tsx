@@ -419,7 +419,7 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 text-right text-sm text-gray-400">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-right text-sm text-gray-400">
             <div>
               <p>Pool APR</p>
               <p className="text-lg text-white font-semibold mt-1">
@@ -516,7 +516,7 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
                   29.18% {position.quoteSymbol}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-sm mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mt-4">
                 <div className="flex items-center space-x-3">
                   <img
                     src={position.baseLogo}
@@ -559,7 +559,7 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
                   Claim
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-sm text-gray-400">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-400">
                 <div>
                   <p>Fees</p>
                   <p className="text-white text-lg mt-1">
@@ -715,9 +715,9 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 rounded-3xl border border-gray-800 bg-[#050910] p-6 space-y-4">
+    <div className="space-y-8 px-4 md:px-0">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-3xl border border-gray-800 bg-[#050910] p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm text-gray-400">Total TVL</div>
@@ -772,7 +772,7 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
             </svg>
           </div>
         </div>
-        <div className="flex-1 rounded-3xl border border-gray-800 bg-[#050910] p-6">
+        <div className="rounded-3xl border border-gray-800 bg-[#050910] p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-sm text-gray-400">Trading Volume (24H)</div>
@@ -848,7 +848,7 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
       </div>
 
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2">
           {(
             [
               { key: "CLMM", label: "CLMM" },
@@ -868,7 +868,7 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
             </button>
           ))}
         </div>
-        <div className="flex items-center space-x-3 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
           <div className="flex items-center space-x-2 bg-[#0F1424] border border-gray-800 rounded-2xl px-3 py-2 w-full lg:w-72">
             <Search size={16} className="text-gray-500" />
             <input
@@ -879,7 +879,7 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
               className="bg-transparent text-sm text-white focus:outline-none flex-1"
             />
           </div>
-          <button className="p-2 rounded-full border border-gray-800 text-gray-400 hover:text-white">
+          <button className="p-2 rounded-full border border-gray-800 text-gray-400 hover:text-white self-start sm:self-auto">
             <Filter size={16} />
           </button>
         </div>
@@ -989,7 +989,7 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500 mb-1">APR</p>
                     <p className="text-white font-semibold flex items-center space-x-2">
@@ -1041,7 +1041,8 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-3xl border border-gray-900 bg-[#080C16]">
+        <div className="rounded-3xl border border-gray-900 bg-[#080C16]">
+          <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[680px]">
             <thead>
               <tr className="text-left text-xs text-gray-500 uppercase tracking-wider">
@@ -1113,6 +1114,63 @@ export const LiquidityPools: React.FC<LiquidityPoolsProps> = ({
               )}
             </tbody>
           </table>
+          </div>
+          <div className="md:hidden space-y-4 p-4">
+            {filteredPools.map((pool) => (
+              <div
+                key={pool.id}
+                className="rounded-2xl border border-gray-800 bg-[#090f1d] p-4 space-y-3"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="flex -space-x-3">
+                    {[pool.baseLogo, pool.quoteLogo].map((logo, index) => (
+                      <img
+                        key={`${logo}-${index}`}
+                        src={logo}
+                        className="w-9 h-9 rounded-full border-2 border-[#090f1d]"
+                      />
+                    ))}
+                  </div>
+                  <div>
+                    <div className="text-white font-semibold">{`${pool.baseSymbol} - ${pool.quoteSymbol}`}</div>
+                    <div className="text-xs text-gray-500 flex items-center space-x-2">
+                      <span>{pool.poolType}</span>
+                      <span className="text-[#00C2FF]">{pool.feeTier}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 text-sm text-gray-300">
+                  <div>
+                    <p className="text-gray-500 text-xs">Liquidity</p>
+                    <p className="text-white font-mono">{formatCurrency(pool.liquidity)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs">Volume (24H)</p>
+                    <p className="text-white font-mono">{formatCurrency(pool.volume24h)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs">Fees (24H)</p>
+                    <p className="text-white font-mono">{formatCurrency(pool.fees24h)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs">APR</p>
+                    <p className="text-[#00FFA3] font-semibold">{pool.apr.toFixed(2)}%</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onSelectPool(pool)}
+                  className="w-full px-4 py-2 rounded-full bg-[#0F4CFF] text-white text-sm hover:bg-[#003CDF]"
+                >
+                  Deposit
+                </button>
+              </div>
+            ))}
+            {filteredPools.length === 0 && (
+              <div className="text-center text-gray-500 py-6 border border-dashed border-gray-700 rounded-2xl">
+                No pools match your filters yet.
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

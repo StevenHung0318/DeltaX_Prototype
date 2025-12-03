@@ -426,7 +426,7 @@ export const Swap = () => {
   };
 
   const renderSwapControls = () => (
-    <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] grid-cols-1">
       <div className="space-y-3">
         {renderTokenSelector(
           "You Pay",
@@ -525,7 +525,7 @@ export const Swap = () => {
 
     return (
       <>
-        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] grid-cols-1">
           <div className="space-y-3">
             {renderTokenSelector(
               "You Pay",
@@ -743,7 +743,7 @@ export const Swap = () => {
 
     return (
       <>
-        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] grid-cols-1">
           <div className="space-y-3">
             {renderTokenSelector(
               "You Pay",
@@ -931,7 +931,7 @@ export const Swap = () => {
             <h3 className="text-white font-semibold">DCA Orders</h3>
             <span className="text-xs text-gray-500">Active DCAs</span>
           </div>
-          <div className="grid grid-cols-12 text-xs text-gray-500 uppercase tracking-wider">
+          <div className="hidden md:grid grid-cols-12 text-xs text-gray-500 uppercase tracking-wider">
             <span className="col-span-3">Orders</span>
             <span className="col-span-3">Price Range</span>
             <span className="col-span-2">Filled Size</span>
@@ -942,26 +942,41 @@ export const Swap = () => {
             {mockDcaOrders.map((order) => (
               <div
                 key={order.id}
-                className="grid grid-cols-12 items-center bg-[#0A0D16] rounded-2xl border border-gray-800 px-4 py-3 text-sm"
+                className="bg-[#0A0D16] rounded-2xl border border-gray-800 px-4 py-3 text-sm"
               >
-                <div className="col-span-3 text-white">
-                  <div className="flex items-center space-x-2">
+                <div className="hidden md:grid grid-cols-12 items-center">
+                  <div className="col-span-3 text-white">
+                    {order.fromToken} → {order.toToken}
+                  </div>
+                  <div className="col-span-3 text-gray-300">
+                    {order.priceRange}
+                  </div>
+                  <div className="col-span-2 text-gray-300">{order.filled}</div>
+                  <div className="col-span-2 text-gray-300">
+                    {order.nextOrder}
+                  </div>
+                  <div className="col-span-2 flex items-center space-x-2">
+                    <button className="px-3 py-1.5 rounded-full bg-[#1A2233] text-gray-300 text-xs">
+                      Claim
+                    </button>
+                  </div>
+                </div>
+                <div className="md:hidden space-y-2 text-gray-300">
+                  <div className="flex justify-between text-white font-semibold">
                     <span>
                       {order.fromToken} → {order.toToken}
                     </span>
+                    <span className="text-xs text-gray-500">
+                      {order.nextOrder}
+                    </span>
                   </div>
-                </div>
-                <div className="col-span-3 text-gray-300">
-                  {order.priceRange}
-                </div>
-                <div className="col-span-2 text-gray-300">{order.filled}</div>
-                <div className="col-span-2 text-gray-300">
-                  {order.nextOrder}
-                </div>
-                <div className="col-span-2 flex items-center space-x-2">
-                  <button className="px-3 py-1.5 rounded-full bg-[#1A2233] text-gray-300 text-xs">
-                    Claim
-                  </button>
+                  <div className="text-xs">Price Range: {order.priceRange}</div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span>Filled: {order.filled}</span>
+                    <button className="px-3 py-1.5 rounded-full bg-[#1A2233] text-gray-200 text-xs">
+                      Claim
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
