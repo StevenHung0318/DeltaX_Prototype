@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { useProtocol } from "../context/ProtocolContext";
 import { formatAddress } from "../utils/format";
 import { Wallet, ChevronDown } from "lucide-react";
-import SynexLogo from "../assets/WaterX.png";
+import SynexLogo from "../assets/WaterX_logo.svg";
 
 type Page = "dashboard" | "markets" | "swap" | "liquidity" | "clob" | "perp";
 
@@ -69,12 +69,16 @@ export const Layout: React.FC<LayoutProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center justify-between sm:justify-start sm:space-x-8">
-              <img src={SynexLogo} alt="WaterX logo" className="h-8 w-auto" />
+              <img src={SynexLogo} alt="WaterX logo" className="h-6 w-auto" />
               <div className="flex items-center space-x-6">
                 <div
                   className="relative"
-                  onMouseEnter={() => handleHoverOpen(setLendOpen, lendCloseTimeout)}
-                  onMouseLeave={() => handleHoverClose(setLendOpen, lendCloseTimeout)}
+                  onMouseEnter={() =>
+                    handleHoverOpen(setLendOpen, lendCloseTimeout)
+                  }
+                  onMouseLeave={() =>
+                    handleHoverClose(setLendOpen, lendCloseTimeout)
+                  }
                   onTouchStart={() => setLendOpen((prev) => !prev)}
                 >
                   <button
@@ -119,8 +123,12 @@ export const Layout: React.FC<LayoutProps> = ({
                 </div>
                 <div
                   className="relative"
-                  onMouseEnter={() => handleHoverOpen(setDexOpen, dexCloseTimeout)}
-                  onMouseLeave={() => handleHoverClose(setDexOpen, dexCloseTimeout)}
+                  onMouseEnter={() =>
+                    handleHoverOpen(setDexOpen, dexCloseTimeout)
+                  }
+                  onMouseLeave={() =>
+                    handleHoverClose(setDexOpen, dexCloseTimeout)
+                  }
                   onTouchStart={() => setDexOpen((prev) => !prev)}
                 >
                   <button
