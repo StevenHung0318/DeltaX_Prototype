@@ -2,11 +2,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import waterxLogo from './assets/WaterX.png';
+import waterxFavicon from './assets/WaterX_Favicon.png';
 
 const favicon = document.getElementById('favicon') as HTMLLinkElement | null;
 if (favicon) {
-  favicon.href = waterxLogo;
+  favicon.href = waterxFavicon;
   favicon.type = 'image/png';
 }
 
