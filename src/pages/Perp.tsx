@@ -797,16 +797,17 @@ export const Perp = () => {
               ))}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-400 border-t border-white/5 pt-4">
-              <div className="flex items-center gap-4">
+              <div className="flex space-x-6 border-b border-[rgba(195,201,228,0.15)]">
                 {(["price", "depth", "details"] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setChartSectionTab(tab)}
-                    className={`uppercase tracking-widest ${
+                    className={`pb-2 text-sm font-semibold ${
                       chartSectionTab === tab
                         ? "text-[#6E7EFE] border-b-2 border-[#6E7EFE]"
                         : "text-gray-500 border-b border-transparent"
-                    } pb-1`}
+                    }`}
+                    style={{ borderRadius: 0 }}
                   >
                     {tab === "price"
                       ? "Price"
@@ -821,17 +822,18 @@ export const Perp = () => {
             <CandlestickChart data={displayedCandles} />
           </div>
           <div className="bg-[#0F1016] border border-gray-800 rounded-3xl p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <div className="flex items-center justify-between border-b border-[rgba(195,201,228,0.15)] pb-3">
               <div className="flex space-x-6">
                 {(["book", "trades"] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setOrderPanelTab(tab)}
-                    className={`text-sm font-semibold pb-1 ${
+                    className={`text-sm font-semibold pb-2 ${
                       orderPanelTab === tab
                         ? "text-[#6E7EFE] border-b-2 border-[#6E7EFE]"
                         : "text-gray-500 border-b border-transparent"
                     }`}
+                    style={{ borderRadius: 0 }}
                   >
                     {tab === "book" ? "Order Book" : "Last Trades"}
                   </button>
@@ -941,7 +943,7 @@ export const Perp = () => {
 
         <div className="space-y-6">
           <div className="bg-[#0F1016] border border-gray-800 rounded-3xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <div className="flex items-center justify-between border-b border-[rgba(195,201,228,0.15)] pb-3">
               <div className="flex space-x-4">
                 {(["Limit", "Market"] as const).map((label) => (
                   <button
@@ -949,12 +951,13 @@ export const Perp = () => {
                     onClick={() =>
                       setPerpOrderType(label === "Limit" ? "Limit" : "Market")
                     }
-                    className={`text-sm font-semibold pb-1 ${
+                    className={`text-sm font-semibold pb-2 ${
                       (perpOrderType === "Limit" && label === "Limit") ||
                       (perpOrderType === "Market" && label === "Market")
                         ? "text-[#6E7EFE] border-b-2 border-[#6E7EFE]"
                         : "text-gray-500 border-b border-transparent"
                     }`}
+                    style={{ borderRadius: 0 }}
                   >
                     {label}
                   </button>
@@ -1175,25 +1178,26 @@ export const Perp = () => {
       <div className="bg-[#0F1016] border border-gray-800 rounded-3xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex space-x-6 border-b border-[rgba(195,201,228,0.15)]">
-            {(
-              [
-                { key: "openOrders", label: "Open Orders" },
-                { key: "tradeHistory", label: "Trade History" },
-              ] as { key: "openOrders" | "tradeHistory"; label: string }[]
-            ).map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setPerpActivityTab(tab.key)}
-                className={`pb-2 text-sm font-semibold ${
-                  perpActivityTab === tab.key
-                    ? "text-[#6E7EFE] border-b-2 border-[#6E7EFE]"
-                    : "text-gray-500 border-b border-transparent"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+                {(
+                  [
+                    { key: "openOrders", label: "Open Orders" },
+                    { key: "tradeHistory", label: "Trade History" },
+                  ] as { key: "openOrders" | "tradeHistory"; label: string }[]
+                ).map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setPerpActivityTab(tab.key)}
+                    className={`pb-2 text-sm font-semibold ${
+                      perpActivityTab === tab.key
+                        ? "text-[#6E7EFE] border-b-2 border-[#6E7EFE]"
+                        : "text-gray-500 border-b border-transparent"
+                    }`}
+                    style={{ borderRadius: 0 }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
           <span className="text-xs text-gray-500">
             {activityRows.length} records
           </span>
